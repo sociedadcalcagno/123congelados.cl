@@ -1,0 +1,227 @@
+123Congelados.cl – Prototipo plataforma e-commerce + WMS
+Documento de contexto para revisión funcional
+
+1. Propósito de este documento
+Este documento describe el alcance funcional y técnico inicial de la plataforma 123Congelados.cl, una tienda online de productos congelados (partiendo con pescado premium). 
+La idea es:
+- Explicar, en lenguaje claro, qué funcionalidades tendrá el sistema.
+- Mostrar cómo se integran la vitrina digital (e-commerce) y el módulo de inventario tipo WMS.
+- Identificar los puntos donde necesitamos tu feedback para ajustar el diseño antes de avanzar a desarrollo.
+
+2. Visión general del sistema
+123Congelados.cl será una plataforma web que combine:
+- Un sitio e-commerce profesional orientado a conversión (vitrina digital + carrito de compra).
+- Un backend con API REST en Node.js + Express.
+- Un modelo de datos preparado para manejar inventario por lotes, bodegas y movimientos tipo WMS.
+- Roles diferenciados para operación interna (ADMIN, COMERCIAL) y clientes finales.
+
+En una primera etapa hablaremos con un “MVP robusto”: algo que ya permita vender, gestionar stock y tener una base seria sobre la cual crecer (integrar pagos online, logística, más bodegas, etc.).
+
+3. Frontend: vitrina digital y flujo de compra
+
+3.1 Home / landing page
+- Banner principal: mensaje claro de valor (pescado premium congelado, calidad, frescura, seguridad).
+- Productos destacados: sección con productos recomendados, más vendidos u ofertas.
+- Mensajes de confianza:
+  - Medios de pago disponibles (inicialmente transferencia / pago simulado, futuro Webpay u otro).
+  - Cobertura de despacho y tiempos estimados.
+  - Mensajes sobre cadena de frío y calidad del producto.
+
+3.2 Catálogo de productos
+- Listado de productos con:
+  - Foto, nombre, breve descripción, precio, stock disponible.
+  - Categorías y subcategorías (p.ej.: Pescados blancos, grasos, mariscos, packs, etc.).
+- Filtros básicos:
+  - Por categoría/subcategoría.
+  - Por rango de precio.
+  - Por disponibilidad (solo productos con stock).
+
+3.3 Ficha de producto
+- Datos principales:
+  - Foto principal (y preparado para múltiples fotos a futuro).
+  - Nombre, descripción detallada, origen, recomendaciones de uso.
+  - Unidad de medida (kg, bandeja, pack, etc.), peso promedio.
+  - Precio vigente y stock disponible.
+- Acciones:
+  - Botón “Agregar al carro”.
+  - Posibilidad de seleccionar cantidad (ej. unidades o kilos, según definición comercial).
+
+3.4 Carro de compra
+- Resumen de ítems:
+  - Producto, cantidad, precio unitario, subtotal.
+- Acciones:
+  - Actualizar cantidad o eliminar ítems.
+  - Ver total del pedido.
+  - Continuar a checkout.
+
+3.5 Checkout
+- Datos del cliente:
+  - Nombre, email, teléfono, dirección, comuna, observaciones.
+- Cálculo de despacho:
+  - Regla básica parametrizable (por comuna o por tramo de monto, en una primera versión).
+- Medios de pago (etapa 1):
+  - Transferencia bancaria (se muestran los datos para transferir).
+  - “Pago simulado” para pruebas de flujo.
+- Confirmación:
+  - Se genera un número de pedido.
+  - Se muestra resumen del pedido y se guarda en el backend.
+
+3.6 Cuenta de cliente (opcional / escalable)
+- Registro e inicio de sesión para clientes que quieran:
+  - Ver historial de pedidos.
+  - Repetir compras.
+- Posibilidad de comprar como invitado sin crear cuenta.
+
+4. Backend: API REST y lógica de negocio
+
+4.1 Tecnología base
+- Node.js + Express para el API REST.
+- Preparado para conectarse a PostgreSQL en producción.
+- Uso de un ORM (Prisma, Sequelize o similar) que permita:
+  - Usar SQLite en entornos de desarrollo (ej. Replit).
+  - Migrar fácilmente a PostgreSQL sin reescribir todo.
+
+4.2 Recursos principales expuestos por la API
+- Usuarios:
+  - Altas, bajas, modificaciones (solo ADMIN).
+  - Manejo de roles: ADMIN, COMERCIAL, CLIENTE.
+- Catálogo de productos:
+  - CRUD de productos (ADMIN y COMERCIAL).
+  - Consulta pública de productos activos con precio y stock.
+- Precios:
+  - Tabla de precios por producto con vigencia (fecha desde/hasta).
+- WMS / inventario:
+  - Bodegas (warehouses).
+  - Ubicaciones dentro de la bodega (locations).
+  - Lotes de producto (lots) con:
+    - Fecha de ingreso, fecha de vencimiento.
+    - Cantidad disponible y reservada.
+  - Movimientos de inventario (inventory_movements):
+    - Tipos: IN (ingreso), OUT (salida), AJUSTE (mermas, correcciones).
+- Pedidos:
+  - orders y order_items.
+  - Reservas de stock por lote (order_reservations).
+
+4.3 Flujos clave
+
+a) Ingreso de stock
+- Registrar un nuevo lote para un producto en una bodega específica.
+- Definir:
+  - Cantidad ingresada.
+  - Fecha de ingreso.
+  - Fecha de vencimiento.
+- Registrar un movimiento de inventario tipo IN para ese lote.
+- Actualizar cantidades disponibles en el lote.
+
+b) Creación de pedido de cliente
+- Crear la orden (orders) y sus ítems (order_items).
+- Aplicar reglas de reserva de stock:
+  - Buscar lotes disponibles para cada producto.
+  - Asignar las cantidades por lote usando FIFO según fecha de vencimiento (primero los que vencen antes).
+  - Registrar las reservas en order_reservations.
+- Dejar la cantidad como “reservada” en los lotes, sin sacar aún el stock físicamente.
+
+c) Confirmación de despacho
+- Tomar las reservas asociadas a un pedido.
+- Convertir cada reserva en:
+  - Movimiento de inventario tipo OUT por el lote afectado.
+  - Actualización de cantidad_disponible y cantidad_reservada.
+- Cambiar estado del pedido (ej.: PENDIENTE → DESPACHADO).
+
+d) Registro de mermas
+- Permitir a roles internos (ADMIN / COMERCIAL) registrar mermas:
+  - Movimiento de tipo AJUSTE.
+  - Indicar cantidad, motivo (pérdida de frío, producto dañado, etc.) y usuario responsable.
+- Ajustar las cantidades de los lotes afectados.
+
+5. Roles y seguridad
+
+Roles propuestos:
+- ADMIN:
+  - Acceso completo a:
+    - Usuarios (gestión de roles).
+    - Catálogo de productos y precios.
+    - Módulo WMS: bodegas, lotes, movimientos.
+    - Pedidos y reportes.
+- COMERCIAL:
+  - Acceso a:
+    - Catálogo (crear/editar productos).
+    - Precios (según política a definir).
+    - Pedidos de clientes.
+    - Registro de mermas y visualización de stock operativo.
+  - No accede a la gestión de usuarios de alto nivel.
+- CLIENTE:
+  - Puede:
+    - Ver catálogo público.
+    - Crear pedidos.
+    - Ver el estado de sus pedidos (si se registra).
+    - Actualizar sus datos básicos.
+
+La autenticación se hará con JWT (tokens) y la autorización por middlewares que validan cada rol para las distintas rutas de la API.
+
+6. Modelo de datos (resumen)
+
+De forma resumida, el modelo contempla las siguientes tablas (a nivel conceptual):
+
+- users (id, nombre, email, rol, hash_password, activo)
+- warehouses (id, nombre, direccion, es_principal)
+- locations (id, id_warehouse, codigo, descripcion)
+- products (id, sku, nombre, descripcion, categoria, subcategoria, unidad_medida, peso_promedio, stock_minimo, activo)
+- product_prices (id, id_product, precio_venta, fecha_desde, fecha_hasta)
+- lots (id, id_product, id_warehouse, codigo_lote, fecha_ingreso, fecha_vencimiento, cantidad_disponible, cantidad_reservada, estado)
+- inventory_movements (id, id_lot, tipo, cantidad, motivo, fecha, usuario_responsable)
+- orders (id, id_cliente, fecha, estado, total, medio_pago, comentarios)
+- order_items (id, id_order, id_product, cantidad, precio_unitario, subtotal)
+- order_reservations (id, id_order_item, id_lot, cantidad_reservada)
+
+7. Roadmap inicial (MVP)
+
+MVP técnico y funcional:
+- Frontend:
+  - Home, catálogo, ficha de producto, carro, checkout.
+- Backend:
+  - API para productos, precios, pedidos, stock.
+  - Autenticación básica con roles.
+  - Flujos:
+    - Ingreso de stock (IN).
+    - Creación de pedido con reservas FIFO.
+    - Confirmación de despacho (OUT).
+    - Registro de mermas (AJUSTE).
+- Datos de ejemplo:
+  - 1 o 2 bodegas.
+  - Algunos productos de pescado premium cargados.
+  - Lotes de ejemplo con distintas fechas de vencimiento.
+  - Usuarios de prueba: 1 ADMIN, 1 COMERCIAL, 1 CLIENTE.
+
+8. Puntos donde necesitamos tu feedback
+
+Para ajustar este diseño a la realidad del negocio, necesitamos tu mirada en:
+
+1) Catálogo inicial:
+   - ¿Qué categorías y subcategorías son críticas en la primera etapa?
+   - ¿Vamos a partir solo con pescado o también mariscos/packs?
+
+2) Reglas de despacho:
+   - ¿Cómo definimos el costo de despacho en la primera versión?
+     - Por comuna, por monto de compra, por peso aproximado, etc.
+   - ¿Hay zonas donde no se despacha o que requieran condiciones especiales?
+
+3) Reglas de stock y mermas:
+   - ¿Cómo se quiere manejar el mínimo de stock por producto?
+   - ¿Qué motivos de merma son relevantes y deben quedar tipificados?
+
+4) Estados de pedido:
+   - ¿Qué estados necesitamos? (ej.: NUEVO, PENDIENTE_PAGO, PAGADO, PREPARACIÓN, DESPACHADO, ENTREGADO, ANULADO).
+   - ¿Qué estados son imprescindibles para la operación actual?
+
+5) Roles y operación interna:
+   - ¿Quién usaría el rol COMERCIAL en la práctica y qué tareas haría día a día?
+   - ¿Hay algún otro rol interno que sea necesario (ej. BODEGA)?
+
+6) Escalabilidad futura:
+   - ¿Qué integraciones ves en el corto/mediano plazo?
+     - Pagos online (Webpay, Mercado Pago, etc.).
+     - Integración con empresas de despacho.
+     - Reportería (ventas por producto, por zona, etc.).
+
+Con tus comentarios sobre estos puntos, ajustamos el diseño y luego pasamos a construir el prototipo en base a esta misma definición.
