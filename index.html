@@ -135,6 +135,43 @@
             cursor: pointer;
         }
 
+        .admin-toolbar {
+            position: sticky;
+            top: 16px;
+            z-index: 12;
+            display: none;
+            justify-content: center;
+            margin-bottom: 18px;
+        }
+
+        .admin-enabled .admin-toolbar {
+            display: flex;
+        }
+
+        .admin-toolbar-inner {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(132, 63, 44, 0.94);
+            color: #fff7f1;
+            box-shadow: 0 16px 32px rgba(53, 28, 22, 0.2);
+        }
+
+        .admin-toolbar-text {
+            font-size: 0.92rem;
+            font-weight: 600;
+        }
+
+        .admin-toolbar .ghost-button {
+            display: inline-flex;
+            background: rgba(255, 255, 255, 0.14);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.18);
+            box-shadow: none;
+        }
+
         .social-link,
         .cta-link,
         .upload-button,
@@ -796,6 +833,13 @@
 </head>
 <body>
     <div class="page-shell">
+        <div class="admin-toolbar" id="admin-toolbar">
+            <div class="admin-toolbar-inner">
+                <span class="admin-toolbar-text">Modo edicion activo</span>
+                <button class="ghost-button" type="button" id="toolbar-logout">Cerrar edicion</button>
+            </div>
+        </div>
+
         <header class="topbar">
             <div class="brand-lockup">
                 <div class="brand-mark" aria-hidden="true">MA</div>
@@ -1281,6 +1325,7 @@
         const adminMessage = document.getElementById('admin-message');
         const adminStatus = document.getElementById('admin-status');
         const adminLogoutButton = document.getElementById('admin-logout');
+        const toolbarLogoutButton = document.getElementById('toolbar-logout');
 
         const catalogState = cards.reduce((acc, card) => {
             const productId = card.dataset.product;
@@ -1484,6 +1529,9 @@
         document.getElementById('admin-logout').addEventListener('click', () => {
             setAdminEnabled(false);
             closeAdminPanel();
+        });
+        toolbarLogoutButton.addEventListener('click', () => {
+            setAdminEnabled(false);
         });
         document.getElementById('admin-submit').addEventListener('click', () => {
             if (adminPasswordInput.value === ADMIN_PASSWORD) {
