@@ -20,7 +20,7 @@ export function AdminLogin() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      toast.error("Credenciales incorrectas");
+      toast.error(error.message);
       return;
     }
     navigate("/admin");
