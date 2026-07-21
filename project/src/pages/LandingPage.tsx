@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ShoppingCart, ArrowRight, Star, Truck, Snowflake, Shield, Fish,
@@ -6,9 +7,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { PRODUCTS, formatCLP, getCategoryLabel } from "@/lib/data";
+import { formatCLP, getCategoryLabel } from "@/lib/data";
 import { useCart } from "@/lib/cart-store";
 import type { Product, Category } from "@/lib/data";
+import { getProducts } from "@/lib/supabase-service";
 import { toast } from "sonner";
 
 const CATEGORIES: { id: Category; label: string; emoji: string; desc: string }[] = [
@@ -116,7 +118,13 @@ function ProductCard({ product }: { product: Product }) {
 }
 
 export function LandingPage() {
-  const featured = PRODUCTS.filter((p) => p.featured).slice(0, 8);
+  const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    getProducts().then(setProducts);
+  }, []);
+
+  const featured = products.filter((p) => p.featured).slice(0, 8);
 
   return (
     <div className="min-h-screen">

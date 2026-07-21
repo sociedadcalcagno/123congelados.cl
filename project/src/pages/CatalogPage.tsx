@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search, SlidersHorizontal, ShoppingCart, Star, Snowflake, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { PRODUCTS, formatCLP, getCategoryLabel } from "@/lib/data";
-import type { Category } from "@/lib/data";
+import { formatCLP, getCategoryLabel } from "@/lib/data";
+import type { Category, Product } from "@/lib/data";
+import { getProducts } from "@/lib/supabase-service";
 import { useCart } from "@/lib/cart-store";
 import { toast } from "sonner";
 
@@ -27,13 +28,18 @@ export function CatalogPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortOption>("featured");
+  const [products, setProducts] = useState<Product[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | "all">(
     (searchParams.get("cat") as Category) || "all"
   );
   const { addItem } = useCart();
 
+  useEffect(() => {
+    getProducts().then(setProducts);
+  }, []);
+
   const filtered = useMemo(() => {
-    let list = [...PRODUCTS];
+    let list = [...products];
 
     if (selectedCategory !== "all") {
       list = list.filter((p) => p.category === selectedCategory);
@@ -68,7 +74,7 @@ export function CatalogPage() {
     }
 
     return list;
-  }, [selectedCategory, search, sort]);
+  }, [products, selectedCategory, search, sort]);
 
   const handleCategoryChange = (cat: Category | "all") => {
     setSelectedCategory(cat);
@@ -80,7 +86,7 @@ export function CatalogPage() {
     setSearchParams(searchParams);
   };
 
-  const handleAdd = (product: (typeof PRODUCTS)[0]) => {
+  const handleAdd = (product: Product) => {
     addItem(product);
     toast.success(`${product.name} agregado`, {
       description: formatCLP(product.price),
