@@ -1,23 +1,48 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Tag, Percent, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-
-const PROMOTIONS = [
-  { id: "promo1", name: "Descuento Salmón Mayo", code: "SALMON20", discount: 20, type: "percent", category: "salmon", active: true, uses: 34, expiry: "2025-05-31" },
-  { id: "promo2", name: "Pack Ahorro Verano", code: "VERANO15", discount: 15, type: "percent", category: "all", active: true, uses: 21, expiry: "2025-06-30" },
-  { id: "promo3", name: "Primera Compra", code: "BIENVENIDO", discount: 10, type: "percent", category: "all", active: true, uses: 58, expiry: "2025-12-31" },
-  { id: "promo4", name: "Camarones 2x1", code: "CAMARONES2X1", discount: 50, type: "percent", category: "camarones", active: false, uses: 12, expiry: "2025-04-30" },
-];
+import {
+  getPromotions, createPromotion, updatePromotion, deletePromotion,
+} from "@/lib/supabase-service";
+import type { Promotion } from "@/lib/supabase-service";
+import { PromotionFormDialog } from "@/components/admin/PromotionFormDialog";
 
 export function AdminPromotions() {
-  const [promos, setPromos] = useState(PROMOTIONS);
+  const [promos, setPromos] = useState<Promotion[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<Promotion | null>(null);
 
-  const toggleActive = (id: string) => {
-    setPromos(prev => prev.map(p => p.id === id ? { ...p, active: !p.active } : p));
+  useEffect(() => {
+    getPromotions().then(setPromos);
+  }, []);
+
+  const toggleActive = async (id: string) => {
+    const promo = promos.find((p) => p.id === id);
+    if (!promo) return;
+    await updatePromotion(id, { active: !promo.active });
+    setPromos((prev) => prev.map((p) => (p.id === id ? { ...p, active: !p.active } : p)));
     toast.success("Promoción actualizada");
+  };
+
+  const handleDelete = async (id: string) => {
+    await deletePromotion(id);
+    setPromos((prev) => prev.filter((p) => p.id !== id));
+    toast.success("Promoción eliminada");
+  };
+
+  const handleSave = async (data: Omit<Promotion, "id" | "uses">) => {
+    if (editing) {
+      await updatePromotion(editing.id, data);
+      setPromos((prev) => prev.map((p) => (p.id === editing.id ? { ...p, ...data } : p)));
+      toast.success("Promoción actualizada");
+    } else {
+      const created = await createPromotion(data);
+      setPromos((prev) => [...prev, created]);
+      toast.success("Promoción creada");
+    }
   };
 
   return (
@@ -27,13 +52,12 @@ export function AdminPromotions() {
           <h1 className="text-3xl font-extrabold">Promociones</h1>
           <p className="text-muted-foreground mt-1">{promos.filter(p => p.active).length} promociones activas</p>
         </div>
-        <Button className="gap-2 bg-aqua-gradient text-white" onClick={() => toast.info("Nueva promoción")}>
+        <Button className="gap-2 bg-aqua-gradient text-white" onClick={() => { setEditing(null); setDialogOpen(true); }}>
           <Plus className="size-4" />
           Nueva Promoción
         </Button>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="shadow-ocean border-0">
           <CardContent className="p-5 flex items-center gap-3">
@@ -70,7 +94,6 @@ export function AdminPromotions() {
         </Card>
       </div>
 
-      {/* Promo Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {promos.map((promo) => (
           <Card key={promo.id} className={`shadow-ocean border ${promo.active ? "border-primary/20" : "border-border opacity-70"}`}>
@@ -109,31 +132,13 @@ export function AdminPromotions() {
               </div>
 
               <div className="flex gap-2 mt-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 gap-1"
-                  onClick={() => toggleActive(promo.id)}
-                >
+                <Button variant="outline" size="sm" className="flex-1 gap-1" onClick={() => toggleActive(promo.id)}>
                   {promo.active ? "Desactivar" : "Activar"}
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-9"
-                  onClick={() => toast.info(`Editando ${promo.name}`)}
-                >
+                <Button variant="ghost" size="icon" className="size-9" onClick={() => { setEditing(promo); setDialogOpen(true); }}>
                   <Edit className="size-4" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-9 text-destructive hover:text-destructive"
-                  onClick={() => {
-                    setPromos(prev => prev.filter(p => p.id !== promo.id));
-                    toast.success("Promoción eliminada");
-                  }}
-                >
+                <Button variant="ghost" size="icon" className="size-9 text-destructive hover:text-destructive" onClick={() => handleDelete(promo.id)}>
                   <Trash2 className="size-4" />
                 </Button>
               </div>
@@ -141,6 +146,13 @@ export function AdminPromotions() {
           </Card>
         ))}
       </div>
+
+      <PromotionFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        promotion={editing}
+        onSave={handleSave}
+      />
     </div>
   );
 }

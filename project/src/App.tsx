@@ -19,6 +19,8 @@ import { AdminOrders } from "@/pages/admin/AdminOrders";
 import { AdminCustomers } from "@/pages/admin/AdminCustomers";
 import { AdminSales } from "@/pages/admin/AdminSales";
 import { AdminPromotions } from "@/pages/admin/AdminPromotions";
+import { AdminLogin } from "@/pages/admin/AdminLogin";
+import { AuthGuard } from "@/components/AuthGuard";
 
 function StorefrontLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -62,8 +64,11 @@ export function App() {
           }
         />
 
-        {/* Admin */}
-        <Route path="/admin" element={<AdminLayout />}>
+        {/* Admin Login */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+
+        {/* Admin (protected) */}
+        <Route path="/admin" element={<AuthGuard><AdminLayout /></AuthGuard>}>
           <Route index element={<AdminDashboard />} />
           <Route path="productos" element={<AdminProducts />} />
           <Route path="inventario" element={<AdminInventory />} />

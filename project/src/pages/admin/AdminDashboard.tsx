@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   TrendingUp, ShoppingBag, Users, Package,
   AlertTriangle, ArrowUpRight, ArrowDownRight, Snowflake
@@ -8,7 +9,9 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip,
   PieChart, Pie, Cell, AreaChart, Area
 } from "recharts";
-import { ORDERS, PRODUCTS, SALES_DATA, CATEGORY_SALES, formatCLP, STATUS_CONFIG } from "@/lib/data";
+import { formatCLP, STATUS_CONFIG } from "@/lib/data";
+import type { Product, Order } from "@/lib/data";
+import { getProducts, getOrders, getSalesData, getCategorySales } from "@/lib/supabase-service";
 
 const KPI_CARDS = [
   {
@@ -70,9 +73,23 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 }
 
 export function AdminDashboard() {
-  const lowStock = PRODUCTS.filter((p) => p.stock <= p.minStock && p.stock > 0);
-  const outOfStock = PRODUCTS.filter((p) => p.stock === 0);
-  const recentOrders = ORDERS.slice(0, 5);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [salesData, setSalesData] = useState<{month: string; ventas: number; pedidos: number}[]>([]);
+  const [categorySales, setCategorySales] = useState<{name: string; value: number; color: string}[]>([]);
+
+  useEffect(() => {
+    Promise.all([getProducts(), getOrders(), getSalesData(), getCategorySales()]).then(([p, o, s, c]) => {
+      setProducts(p);
+      setOrders(o);
+      setSalesData(s);
+      setCategorySales(c);
+    });
+  }, []);
+
+  const lowStock = products.filter((p) => p.stock <= p.minStock && p.stock > 0);
+  const outOfStock = products.filter((p) => p.stock === 0);
+  const recentOrders = orders.slice(0, 5);
 
   return (
     <div className="space-y-8">
@@ -126,7 +143,7 @@ export function AdminDashboard() {
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={SALES_DATA} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                <AreaChart data={salesData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
                   <defs>
                     <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.4} />
@@ -174,7 +191,7 @@ export function AdminDashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={CATEGORY_SALES}
+                    data={categorySales}
                     cx="50%"
                     cy="50%"
                     innerRadius={50}
@@ -182,7 +199,7 @@ export function AdminDashboard() {
                     paddingAngle={3}
                     dataKey="value"
                   >
-                    {CATEGORY_SALES.map((entry, index) => (
+                    {categorySales.map((entry, index) => (
                       <Cell key={index} fill={entry.color} />
                     ))}
                   </Pie>
@@ -191,7 +208,7 @@ export function AdminDashboard() {
               </ResponsiveContainer>
             </div>
             <div className="space-y-2 mt-2">
-              {CATEGORY_SALES.map((cat) => (
+              {categorySales.map((cat) => (
                 <div key={cat.name} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <div className="size-2.5 rounded-full" style={{ background: cat.color }} />
@@ -294,7 +311,7 @@ export function AdminDashboard() {
         <CardContent>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={SALES_DATA} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+              <BarChart data={salesData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis
                   dataKey="month"

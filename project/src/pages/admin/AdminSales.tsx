@@ -1,10 +1,12 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   ResponsiveContainer, Tooltip
 } from "recharts";
-import { SALES_DATA, CATEGORY_SALES, formatCLP } from "@/lib/data";
+import { formatCLP } from "@/lib/data";
+import { getSalesData, getCategorySales } from "@/lib/supabase-service";
 import { TrendingUp, ShoppingBag } from "lucide-react";
 
 function ChartTooltip({ active, payload, label }: {active?: boolean; payload?: Array<{value: number; name: string; color: string}>; label?: string}) {
@@ -24,8 +26,18 @@ function ChartTooltip({ active, payload, label }: {active?: boolean; payload?: A
 }
 
 export function AdminSales() {
-  const totalSales = SALES_DATA.reduce((sum, s) => sum + s.ventas, 0);
-  const totalOrders = SALES_DATA.reduce((sum, s) => sum + s.pedidos, 0);
+  const [salesData, setSalesData] = useState<{month: string; ventas: number; pedidos: number}[]>([]);
+  const [categorySales, setCategorySales] = useState<{name: string; value: number; color: string}[]>([]);
+
+  useEffect(() => {
+    Promise.all([getSalesData(), getCategorySales()]).then(([s, c]) => {
+      setSalesData(s);
+      setCategorySales(c);
+    });
+  }, []);
+
+  const totalSales = salesData.reduce((sum, s) => sum + s.ventas, 0);
+  const totalOrders = salesData.reduce((sum, s) => sum + s.pedidos, 0);
   const avgTicket = totalSales / totalOrders;
 
   const topProducts = [
@@ -73,7 +85,7 @@ export function AdminSales() {
         <CardContent>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={SALES_DATA} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+              <AreaChart data={salesData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                 <defs>
                   <linearGradient id="areaGrad1" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.4} />
@@ -129,13 +141,13 @@ export function AdminSales() {
         <CardContent>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={CATEGORY_SALES} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+              <BarChart data={categorySales} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} width={80} />
                 <Tooltip formatter={(v) => `${v}%`} />
                 <Bar dataKey="value" name="%" fill="var(--chart-1)" radius={[0, 4, 4, 0]}>
-                  {CATEGORY_SALES.map((entry, index) => (
+                  {categorySales.map((entry, index) => (
                     <rect key={index} fill={entry.color} />
                   ))}
                 </Bar>

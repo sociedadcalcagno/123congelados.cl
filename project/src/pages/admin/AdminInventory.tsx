@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, TrendingDown, TrendingUp, RefreshCw, Snowflake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,11 +7,22 @@ import { Progress } from "@/components/ui/progress";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { PRODUCTS, INVENTORY_MOVEMENTS, formatCLP } from "@/lib/data";
+import { formatCLP } from "@/lib/data";
+import type { Product } from "@/lib/data";
+import { getProducts, getInventoryMovements, restockProduct } from "@/lib/supabase-service";
+import type { InventoryMovement } from "@/lib/data";
 import { toast } from "sonner";
 
 export function AdminInventory() {
-  const [products] = useState(PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [movements, setMovements] = useState<InventoryMovement[]>([]);
+
+  useEffect(() => {
+    Promise.all([getProducts(), getInventoryMovements()]).then(([p, m]) => {
+      setProducts(p);
+      setMovements(m);
+    });
+  }, []);
 
   const totalValue = products.reduce((sum, p) => sum + p.price * p.stock, 0);
   const lowStock = products.filter(p => p.stock <= p.minStock && p.stock > 0);
@@ -183,7 +194,15 @@ export function AdminInventory() {
                       variant="outline"
                       size="sm"
                       className="text-xs gap-1"
-                      onClick={() => toast.info(`Reabasteciendo ${p.name}`)}
+                      onClick={async () => {
+                        const qty = prompt(`Reabastecer "${p.name}". Cantidad a ingresar:`);
+                        if (!qty || isNaN(Number(qty)) || Number(qty) <= 0) return;
+                        await restockProduct(p.id, Number(qty), p.name);
+                        setProducts((prev) => prev.map((prod) => prod.id === p.id ? { ...prod, stock: prod.stock + Number(qty) } : prod));
+                        const today = new Date().toISOString().slice(0, 10);
+                        setMovements((prev) => [{ id: `m${Date.now()}`, productId: p.id, productName: p.name, type: "entrada" as const, quantity: Number(qty), date: today, reason: "Reabastecimiento manual", user: "Admin" }, ...prev]);
+                        toast.success(`${p.name}: +${qty} ${p.unit}`);
+                      }}
                     >
                       <RefreshCw className="size-3" />
                       Reabastecer
@@ -215,7 +234,7 @@ export function AdminInventory() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {INVENTORY_MOVEMENTS.map((mov) => (
+              {movements.map((mov) => (
                 <TableRow key={mov.id}>
                   <TableCell className="font-medium text-sm">{mov.productName}</TableCell>
                   <TableCell>

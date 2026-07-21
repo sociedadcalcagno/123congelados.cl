@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, Users, TrendingUp, Phone, Mail } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -6,25 +6,32 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { CUSTOMERS, formatCLP } from "@/lib/data";
+import { formatCLP } from "@/lib/data";
+import type { Customer } from "@/lib/data";
+import { getCustomers } from "@/lib/supabase-service";
 
 export function AdminCustomers() {
   const [search, setSearch] = useState("");
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
-  const filtered = CUSTOMERS.filter(
+  useEffect(() => {
+    getCustomers().then(setCustomers);
+  }, []);
+
+  const filtered = customers.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalRevenue = CUSTOMERS.reduce((sum, c) => sum + c.totalSpent, 0);
-  const avgOrderValue = totalRevenue / CUSTOMERS.reduce((sum, c) => sum + c.totalOrders, 0);
+  const totalRevenue = customers.reduce((sum, c) => sum + c.totalSpent, 0);
+  const avgOrderValue = totalRevenue / customers.reduce((sum, c) => sum + c.totalOrders, 0);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-extrabold">Clientes</h1>
-        <p className="text-muted-foreground mt-1">{CUSTOMERS.length} clientes registrados</p>
+        <p className="text-muted-foreground mt-1">{customers.length} clientes registrados</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -35,7 +42,7 @@ export function AdminCustomers() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Clientes</p>
-              <p className="text-2xl font-extrabold">{CUSTOMERS.length}</p>
+              <p className="text-2xl font-extrabold">{customers.length}</p>
             </div>
           </CardContent>
         </Card>

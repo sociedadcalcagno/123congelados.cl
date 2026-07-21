@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, Eye, CheckCircle, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,14 +7,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { ORDERS, formatCLP, STATUS_CONFIG } from "@/lib/data";
+import { formatCLP, STATUS_CONFIG } from "@/lib/data";
 import type { Order } from "@/lib/data";
+import { getOrders, updateOrderStatus } from "@/lib/supabase-service";
 import { toast } from "sonner";
 
 export function AdminOrders() {
   const [search, setSearch] = useState("");
-  const [orders, setOrders] = useState<Order[]>(ORDERS);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<Order["status"] | "all">("all");
+
+  useEffect(() => {
+    getOrders().then(setOrders);
+  }, []);
 
   const filtered = orders.filter((o) => {
     const matchesSearch =
@@ -24,7 +29,8 @@ export function AdminOrders() {
     return matchesSearch && matchesFilter;
   });
 
-  const updateStatus = (id: string, status: Order["status"]) => {
+  const updateStatus = async (id: string, status: Order["status"]) => {
+    await updateOrderStatus(id, status);
     setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
     toast.success(`Pedido ${id} actualizado a: ${STATUS_CONFIG[status].label}`);
   };

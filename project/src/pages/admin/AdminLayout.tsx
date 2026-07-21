@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Package, Warehouse, ShoppingBag, Users,
@@ -12,7 +13,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
-import { ORDERS, PRODUCTS } from "@/lib/data";
+import { getOrders, getProducts } from "@/lib/supabase-service";
 
 const NAV_ITEMS = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -26,10 +27,19 @@ const NAV_ITEMS = [
 
 export function AdminLayout() {
   const location = useLocation();
+  const [pendingOrders, setPendingOrders] = useState(0);
+  const [lowStockCount, setLowStockCount] = useState(0);
+  const [outOfStockCount, setOutOfStockCount] = useState(0);
 
-  const pendingOrders = ORDERS.filter((o) => o.status === "pendiente").length;
-  const lowStockCount = PRODUCTS.filter((p) => p.stock <= p.minStock && p.stock > 0).length;
-  const outOfStockCount = PRODUCTS.filter((p) => p.stock === 0).length;
+  useEffect(() => {
+    getOrders().then((orders) => {
+      setPendingOrders(orders.filter((o) => o.status === "pendiente").length);
+    });
+    getProducts().then((products) => {
+      setLowStockCount(products.filter((p) => p.stock <= p.minStock && p.stock > 0).length);
+      setOutOfStockCount(products.filter((p) => p.stock === 0).length);
+    });
+  }, []);
 
   return (
     <SidebarProvider defaultOpen>

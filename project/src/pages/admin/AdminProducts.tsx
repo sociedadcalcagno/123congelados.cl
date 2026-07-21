@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Search, Edit, Trash2, Snowflake, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,13 +7,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { PRODUCTS, formatCLP, getCategoryLabel } from "@/lib/data";
+import { formatCLP, getCategoryLabel } from "@/lib/data";
 import type { Product } from "@/lib/data";
+import { getProducts, deleteProduct, createProduct, updateProduct } from "@/lib/supabase-service";
+import { ProductFormDialog } from "@/components/admin/ProductFormDialog";
 import { toast } from "sonner";
 
 export function AdminProducts() {
   const [search, setSearch] = useState("");
-  const [products, setProducts] = useState<Product[]>(PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<Product | null>(null);
+
+  useEffect(() => {
+    getProducts().then(setProducts);
+  }, []);
 
   const filtered = products.filter(
     (p) =>
@@ -21,9 +29,22 @@ export function AdminProducts() {
       getCategoryLabel(p.category).toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    await deleteProduct(id);
     setProducts((prev) => prev.filter((p) => p.id !== id));
     toast.success("Producto eliminado");
+  };
+
+  const handleSave = async (data: Omit<Product, "id">) => {
+    if (editing) {
+      const updated = await updateProduct(editing.id, data);
+      setProducts((prev) => prev.map((p) => (p.id === editing.id ? updated : p)));
+      toast.success("Producto actualizado");
+    } else {
+      const created = await createProduct(data);
+      setProducts((prev) => [...prev, created]);
+      toast.success("Producto creado");
+    }
   };
 
   const getStockBadge = (product: Product) => {
@@ -41,13 +62,12 @@ export function AdminProducts() {
           <h1 className="text-3xl font-extrabold">Productos</h1>
           <p className="text-muted-foreground mt-1">{products.length} productos registrados</p>
         </div>
-        <Button className="gap-2 bg-aqua-gradient text-white" onClick={() => toast.info("Formulario de nuevo producto")}>
+        <Button className="gap-2 bg-aqua-gradient text-white" onClick={() => { setEditing(null); setDialogOpen(true); }}>
           <Plus className="size-4" />
           Nuevo Producto
         </Button>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: "Total Productos", value: products.length, icon: Package, color: "text-primary", bg: "bg-primary/10" },
@@ -69,7 +89,6 @@ export function AdminProducts() {
         ))}
       </div>
 
-      {/* Table */}
       <Card className="shadow-ocean border-0">
         <CardHeader>
           <div className="flex items-center gap-4">
@@ -104,11 +123,7 @@ export function AdminProducts() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="size-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="size-full object-cover"
-                          />
+                          <img src={product.image} alt={product.name} className="size-full object-cover" />
                         </div>
                         <div>
                           <p className="font-semibold text-sm">{product.name}</p>
@@ -144,7 +159,7 @@ export function AdminProducts() {
                           variant="ghost"
                           size="icon"
                           className="size-8"
-                          onClick={() => toast.info(`Editando: ${product.name}`)}
+                          onClick={() => { setEditing(product); setDialogOpen(true); }}
                         >
                           <Edit className="size-4" />
                         </Button>
@@ -165,6 +180,13 @@ export function AdminProducts() {
           </div>
         </CardContent>
       </Card>
+
+      <ProductFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        product={editing}
+        onSave={handleSave}
+      />
     </div>
   );
 }
