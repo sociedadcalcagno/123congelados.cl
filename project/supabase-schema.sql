@@ -125,17 +125,17 @@ insert into orders (id, customer, email, phone, address, total, status, date, "p
   ('ORD-2025-004', 'Luis Pérez', 'lperez@hotmail.com', '+56 9 5432 1098', 'Vitacura 2345, Santiago', 69950, 'pendiente', '2025-05-15', 'WhatsApp'),
   ('ORD-2025-005', 'Patricia Silva', 'patricia.silva@gmail.com', '+56 9 4321 0987', 'Maipú 3456, Santiago', 59960, 'entregado', '2025-05-13', 'Transferencia');
 
-insert into order_items ("orderId", "productId", quantity, price, name) values
-  ('ORD-2025-001', 'p1', 2, 18990, 'Salmón Atlántico Premium'),
-  ('ORD-2025-001', 'p3', 1, 15990, 'Camarones Ecuatorianos'),
-  ('ORD-2025-002', 'p9', 1, 44990, 'Pack Congelados Premium'),
-  ('ORD-2025-003', 'p2', 2, 24990, 'Filetes de Salmón Ahumado'),
-  ('ORD-2025-003', 'p7', 1, 22990, 'Mix de Mariscos Premium'),
-  ('ORD-2025-004', 'p5', 3, 9990, 'Reineta Fresca Entera'),
-  ('ORD-2025-004', 'p4', 2, 19990, 'Camarones Pelados XL'),
-  ('ORD-2025-005', 'p1', 1, 18990, 'Salmón Atlántico Premium'),
-  ('ORD-2025-005', 'p3', 2, 15990, 'Camarones Ecuatorianos'),
-  ('ORD-2025-005', 'p8', 1, 8990, 'Cholgas al Natural');
+insert into order_items (id, "orderId", "productId", quantity, price, name) values
+  ('oi1', 'ORD-2025-001', 'p1', 2, 18990, 'Salmón Atlántico Premium'),
+  ('oi2', 'ORD-2025-001', 'p3', 1, 15990, 'Camarones Ecuatorianos'),
+  ('oi3', 'ORD-2025-002', 'p9', 1, 44990, 'Pack Congelados Premium'),
+  ('oi4', 'ORD-2025-003', 'p2', 2, 24990, 'Filetes de Salmón Ahumado'),
+  ('oi5', 'ORD-2025-003', 'p7', 1, 22990, 'Mix de Mariscos Premium'),
+  ('oi6', 'ORD-2025-004', 'p5', 3, 9990, 'Reineta Fresca Entera'),
+  ('oi7', 'ORD-2025-004', 'p4', 2, 19990, 'Camarones Pelados XL'),
+  ('oi8', 'ORD-2025-005', 'p1', 1, 18990, 'Salmón Atlántico Premium'),
+  ('oi9', 'ORD-2025-005', 'p3', 2, 15990, 'Camarones Ecuatorianos'),
+  ('oi10', 'ORD-2025-005', 'p8', 1, 8990, 'Cholgas al Natural');
 
 insert into customers (id, name, email, phone, address, "totalOrders", "totalSpent", "lastOrder", status) values
   ('c1', 'María González', 'maria.gonzalez@gmail.com', '+56 9 8765 4321', 'Av. Providencia 1234, Santiago', 8, 285600, '2025-05-14', 'activo'),
