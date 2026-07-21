@@ -4,7 +4,7 @@
 
 -- 1. PRODUCTOS
 create table products (
-  id uuid default gen_random_uuid() primary key,
+  id text primary key,
   name text not null,
   category text not null,
   price numeric not null,
@@ -38,7 +38,7 @@ create table orders (
 
 -- 3. ITEMS DE ORDEN
 create table order_items (
-  id uuid default gen_random_uuid() primary key,
+  id text primary key,
   "orderId" text references orders(id) on delete cascade,
   "productId" text not null,
   quantity integer not null,
