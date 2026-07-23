@@ -5,6 +5,44 @@ const SUPABASE_URL = envSupabaseUrl.startsWith("https://")
   : DEFAULT_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
+async function requestSupabase(url, options) {
+  const https = await import("node:https");
+  const target = new URL(url);
+
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      {
+        hostname: target.hostname,
+        path: `${target.pathname}${target.search}`,
+        method: options.method,
+        headers: options.headers,
+      },
+      (res) => {
+        let body = "";
+        res.setEncoding("utf8");
+        res.on("data", (chunk) => {
+          body += chunk;
+        });
+        res.on("end", () => {
+          resolve({
+            status: res.statusCode || 500,
+            contentType: res.headers["content-type"] || "application/json",
+            body,
+          });
+        });
+      }
+    );
+
+    req.on("error", reject);
+    req.setTimeout(15000, () => {
+      req.destroy(new Error("Supabase request timeout"));
+    });
+
+    if (options.body) req.write(options.body);
+    req.end();
+  });
+}
+
 export const handler = async (event) => {
   if (!SUPABASE_KEY) {
     return {
@@ -25,7 +63,7 @@ export const handler = async (event) => {
   let response;
 
   try {
-    response = await fetch(targetUrl, {
+    response = await requestSupabase(targetUrl, {
       method: event.httpMethod,
       headers: {
         apikey: SUPABASE_KEY,
@@ -47,12 +85,11 @@ export const handler = async (event) => {
     };
   }
 
-  const body = await response.text();
   return {
     statusCode: response.status,
     headers: {
-      "content-type": response.headers.get("content-type") || "application/json",
+      "content-type": response.contentType,
     },
-    body,
+    body: response.body,
   };
 };
