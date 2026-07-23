@@ -16,11 +16,21 @@ import { toast } from "sonner";
 export function AdminProducts() {
   const [search, setSearch] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
 
   useEffect(() => {
-    getProducts().then(setProducts);
+    getProducts()
+      .then((data) => {
+        setProducts(data);
+        setError(null);
+      })
+      .catch((error) => {
+        const message = error instanceof Error ? error.message : JSON.stringify(error);
+        setError(message);
+        toast.error(message);
+      });
   }, []);
 
   const filtered = products.filter(
@@ -110,6 +120,11 @@ export function AdminProducts() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          {error && (
+            <div className="m-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              Error cargando productos: {error}
+            </div>
+          )}
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
