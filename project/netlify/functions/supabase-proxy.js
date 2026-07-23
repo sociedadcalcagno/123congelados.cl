@@ -1,7 +1,7 @@
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://gacgollaafyecysczbs.supabase.co";
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   if (!SUPABASE_KEY) {
     return {
       statusCode: 500,
