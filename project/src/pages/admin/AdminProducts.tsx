@@ -36,14 +36,19 @@ export function AdminProducts() {
   };
 
   const handleSave = async (data: Omit<Product, "id">) => {
-    if (editing) {
-      const updated = await updateProduct(editing.id, data);
-      setProducts((prev) => prev.map((p) => (p.id === editing.id ? updated : p)));
-      toast.success("Producto actualizado");
-    } else {
-      const created = await createProduct(data);
-      setProducts((prev) => [...prev, created]);
-      toast.success("Producto creado");
+    try {
+      if (editing) {
+        const updated = await updateProduct(editing.id, data);
+        setProducts((prev) => prev.map((p) => (p.id === editing.id ? updated : p)));
+        toast.success("Producto actualizado");
+      } else {
+        const created = await createProduct(data);
+        setProducts((prev) => [...prev, created]);
+        toast.success("Producto creado");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo guardar el producto");
+      throw error;
     }
   };
 

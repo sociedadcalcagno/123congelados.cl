@@ -3,22 +3,30 @@ import type { Product, Order, Customer, InventoryMovement } from "./data";
 
 // ---------- Products ----------
 export async function getProducts(): Promise<Product[]> {
-  const { data } = await supabase.from("products").select("*").order("name");
+  const { data, error } = await supabase.from("products").select("*").order("name");
+  if (error) throw error;
   return (data ?? []) as Product[];
 }
 
 export async function createProduct(product: Omit<Product, "id">): Promise<Product> {
-  const { data } = await supabase.from("products").insert(product).select().single();
+  const { data, error } = await supabase
+    .from("products")
+    .insert({ id: `p${Date.now()}`, ...product })
+    .select()
+    .single();
+  if (error) throw error;
   return data as Product;
 }
 
 export async function updateProduct(id: string, updates: Partial<Product>): Promise<Product> {
-  const { data } = await supabase.from("products").update(updates).eq("id", id).select().single();
+  const { data, error } = await supabase.from("products").update(updates).eq("id", id).select().single();
+  if (error) throw error;
   return data as Product;
 }
 
 export async function deleteProduct(id: string): Promise<void> {
-  await supabase.from("products").delete().eq("id", id);
+  const { error } = await supabase.from("products").delete().eq("id", id);
+  if (error) throw error;
 }
 
 // ---------- Orders ----------
@@ -28,7 +36,8 @@ export async function getOrders(): Promise<Order[]> {
 }
 
 export async function updateOrderStatus(id: string, status: Order["status"]): Promise<void> {
-  await supabase.from("orders").update({ status }).eq("id", id);
+  const { error } = await supabase.from("orders").update({ status }).eq("id", id);
+  if (error) throw error;
 }
 
 // ---------- Customers ----------
@@ -62,27 +71,36 @@ export async function getPromotions(): Promise<Promotion[]> {
 }
 
 export async function createPromotion(promo: Omit<Promotion, "id" | "uses">): Promise<Promotion> {
-  const { data } = await supabase.from("promotions").insert({ ...promo, uses: 0 }).select().single();
+  const { data, error } = await supabase
+    .from("promotions")
+    .insert({ id: `promo${Date.now()}`, ...promo, uses: 0 })
+    .select()
+    .single();
+  if (error) throw error;
   return data as Promotion;
 }
 
 export async function updatePromotion(id: string, updates: Partial<Promotion>): Promise<void> {
-  await supabase.from("promotions").update(updates).eq("id", id);
+  const { error } = await supabase.from("promotions").update(updates).eq("id", id);
+  if (error) throw error;
 }
 
 export async function deletePromotion(id: string): Promise<void> {
-  await supabase.from("promotions").delete().eq("id", id);
+  const { error } = await supabase.from("promotions").delete().eq("id", id);
+  if (error) throw error;
 }
 
 // ---------- Inventory Restock ----------
 export async function restockProduct(productId: string, quantity: number, productName: string): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
 
-  const { data: product } = await supabase.from("products").select("stock").eq("id", productId).single();
+  const { data: product, error: productError } = await supabase.from("products").select("stock").eq("id", productId).single();
+  if (productError) throw productError;
   if (!product) return;
 
-  await supabase.from("products").update({ stock: product.stock + quantity }).eq("id", productId);
-  await supabase.from("inventory_movements").insert({
+  const { error: updateError } = await supabase.from("products").update({ stock: product.stock + quantity }).eq("id", productId);
+  if (updateError) throw updateError;
+  const { error: movementError } = await supabase.from("inventory_movements").insert({
     id: `m${Date.now()}`,
     productId,
     productName,
@@ -92,6 +110,7 @@ export async function restockProduct(productId: string, quantity: number, produc
     reason: "Reabastecimiento manual",
     user: "Admin",
   });
+  if (movementError) throw movementError;
 }
 
 // ---------- Dashboard ----------

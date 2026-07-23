@@ -34,14 +34,19 @@ export function AdminPromotions() {
   };
 
   const handleSave = async (data: Omit<Promotion, "id" | "uses">) => {
-    if (editing) {
-      await updatePromotion(editing.id, data);
-      setPromos((prev) => prev.map((p) => (p.id === editing.id ? { ...p, ...data } : p)));
-      toast.success("Promoción actualizada");
-    } else {
-      const created = await createPromotion(data);
-      setPromos((prev) => [...prev, created]);
-      toast.success("Promoción creada");
+    try {
+      if (editing) {
+        await updatePromotion(editing.id, data);
+        setPromos((prev) => prev.map((p) => (p.id === editing.id ? { ...p, ...data } : p)));
+        toast.success("Promoción actualizada");
+      } else {
+        const created = await createPromotion(data);
+        setPromos((prev) => [...prev, created]);
+        toast.success("Promoción creada");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo guardar la promoción");
+      throw error;
     }
   };
 
