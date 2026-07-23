@@ -1,55 +1,69 @@
-import { supabase } from "./supabase";
 import type { Product, Order, Customer, InventoryMovement } from "./data";
+
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`/.netlify/functions/supabase-proxy?path=${encodeURIComponent(path)}`, {
+    ...init,
+    headers: {
+      "content-type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+  });
+
+  const text = await response.text();
+  const payload = text ? JSON.parse(text) : null;
+
+  if (!response.ok) {
+    throw new Error(payload?.message || payload?.hint || text || `HTTP ${response.status}`);
+  }
+
+  return payload as T;
+}
 
 // ---------- Products ----------
 export async function getProducts(): Promise<Product[]> {
-  const { data, error } = await supabase.from("products").select("*").order("name");
-  if (error) throw error;
-  return (data ?? []) as Product[];
+  return apiFetch<Product[]>("/rest/v1/products?select=*&order=name.asc");
 }
 
 export async function createProduct(product: Omit<Product, "id">): Promise<Product> {
-  const { data, error } = await supabase
-    .from("products")
-    .insert({ id: `p${Date.now()}`, ...product })
-    .select()
-    .single();
-  if (error) throw error;
-  return data as Product;
+  const data = await apiFetch<Product[]>("/rest/v1/products?select=*", {
+    method: "POST",
+    body: JSON.stringify({ id: `p${Date.now()}`, ...product }),
+  });
+  return data[0];
 }
 
 export async function updateProduct(id: string, updates: Partial<Product>): Promise<Product> {
-  const { data, error } = await supabase.from("products").update(updates).eq("id", id).select().single();
-  if (error) throw error;
-  return data as Product;
+  const data = await apiFetch<Product[]>(`/rest/v1/products?id=eq.${encodeURIComponent(id)}&select=*`, {
+    method: "PATCH",
+    body: JSON.stringify(updates),
+  });
+  return data[0];
 }
 
 export async function deleteProduct(id: string): Promise<void> {
-  const { error } = await supabase.from("products").delete().eq("id", id);
-  if (error) throw error;
+  await apiFetch(`/rest/v1/products?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 // ---------- Orders ----------
 export async function getOrders(): Promise<Order[]> {
-  const { data } = await supabase.from("orders").select("*").order("date", { ascending: false });
-  return (data ?? []) as Order[];
+  return apiFetch<Order[]>("/rest/v1/orders?select=*&order=date.desc");
 }
 
 export async function updateOrderStatus(id: string, status: Order["status"]): Promise<void> {
-  const { error } = await supabase.from("orders").update({ status }).eq("id", id);
-  if (error) throw error;
+  await apiFetch(`/rest/v1/orders?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
 }
 
 // ---------- Customers ----------
 export async function getCustomers(): Promise<Customer[]> {
-  const { data } = await supabase.from("customers").select("*").order("name");
-  return (data ?? []) as Customer[];
+  return apiFetch<Customer[]>("/rest/v1/customers?select=*&order=name.asc");
 }
 
 // ---------- Inventory Movements ----------
 export async function getInventoryMovements(): Promise<InventoryMovement[]> {
-  const { data } = await supabase.from("inventory_movements").select("*").order("date", { ascending: false });
-  return (data ?? []) as InventoryMovement[];
+  return apiFetch<InventoryMovement[]>("/rest/v1/inventory_movements?select=*&order=date.desc");
 }
 
 // ---------- Promotions ----------
@@ -66,60 +80,60 @@ export interface Promotion {
 }
 
 export async function getPromotions(): Promise<Promotion[]> {
-  const { data } = await supabase.from("promotions").select("*").order("name");
-  return (data ?? []) as Promotion[];
+  return apiFetch<Promotion[]>("/rest/v1/promotions?select=*&order=name.asc");
 }
 
 export async function createPromotion(promo: Omit<Promotion, "id" | "uses">): Promise<Promotion> {
-  const { data, error } = await supabase
-    .from("promotions")
-    .insert({ id: `promo${Date.now()}`, ...promo, uses: 0 })
-    .select()
-    .single();
-  if (error) throw error;
-  return data as Promotion;
+  const data = await apiFetch<Promotion[]>("/rest/v1/promotions?select=*", {
+    method: "POST",
+    body: JSON.stringify({ id: `promo${Date.now()}`, ...promo, uses: 0 }),
+  });
+  return data[0];
 }
 
 export async function updatePromotion(id: string, updates: Partial<Promotion>): Promise<void> {
-  const { error } = await supabase.from("promotions").update(updates).eq("id", id);
-  if (error) throw error;
+  await apiFetch(`/rest/v1/promotions?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify(updates),
+  });
 }
 
 export async function deletePromotion(id: string): Promise<void> {
-  const { error } = await supabase.from("promotions").delete().eq("id", id);
-  if (error) throw error;
+  await apiFetch(`/rest/v1/promotions?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 // ---------- Inventory Restock ----------
 export async function restockProduct(productId: string, quantity: number, productName: string): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
-
-  const { data: product, error: productError } = await supabase.from("products").select("stock").eq("id", productId).single();
-  if (productError) throw productError;
+  const products = await apiFetch<{ stock: number }[]>(`/rest/v1/products?id=eq.${encodeURIComponent(productId)}&select=stock`);
+  const product = products[0];
   if (!product) return;
 
-  const { error: updateError } = await supabase.from("products").update({ stock: product.stock + quantity }).eq("id", productId);
-  if (updateError) throw updateError;
-  const { error: movementError } = await supabase.from("inventory_movements").insert({
-    id: `m${Date.now()}`,
-    productId,
-    productName,
-    type: "entrada",
-    quantity,
-    date: today,
-    reason: "Reabastecimiento manual",
-    user: "Admin",
+  await apiFetch(`/rest/v1/products?id=eq.${encodeURIComponent(productId)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ stock: product.stock + quantity }),
   });
-  if (movementError) throw movementError;
+
+  await apiFetch("/rest/v1/inventory_movements", {
+    method: "POST",
+    body: JSON.stringify({
+      id: `m${Date.now()}`,
+      productId,
+      productName,
+      type: "entrada",
+      quantity,
+      date: today,
+      reason: "Reabastecimiento manual",
+      user: "Admin",
+    }),
+  });
 }
 
 // ---------- Dashboard ----------
 export async function getSalesData(): Promise<{ month: string; ventas: number; pedidos: number }[]> {
-  const { data } = await supabase.from("sales_data").select("*").order("id");
-  return (data ?? []) as { month: string; ventas: number; pedidos: number }[];
+  return apiFetch<{ month: string; ventas: number; pedidos: number }[]>("/rest/v1/sales_data?select=*&order=id.asc");
 }
 
 export async function getCategorySales(): Promise<{ name: string; value: number; color: string }[]> {
-  const { data } = await supabase.from("category_sales").select("*").order("id");
-  return (data ?? []) as { name: string; value: number; color: string }[];
+  return apiFetch<{ name: string; value: number; color: string }[]>("/rest/v1/category_sales?select=*&order=id.asc");
 }
