@@ -13,7 +13,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const payload = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
-    throw new Error(payload?.message || payload?.hint || text || `HTTP ${response.status}`);
+    throw new Error(payload ? JSON.stringify(payload) : text || `HTTP ${response.status}`);
   }
 
   return payload as T;
