@@ -1,6 +1,6 @@
 import type { Product, Order, Customer, InventoryMovement } from "./data";
 
-const SUPABASE_URL = "https://gacgollaafyecysczbs.supabase.co";
+const SUPABASE_URL = "https://gacgollaafyecyszczbs.supabase.co";
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {

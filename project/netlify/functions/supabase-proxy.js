@@ -1,4 +1,4 @@
-const DEFAULT_SUPABASE_URL = "https://gacgollaafyecysczbs.supabase.co";
+const DEFAULT_SUPABASE_URL = "https://gacgollaafyecyszczbs.supabase.co";
 const envSupabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
 const SUPABASE_URL = envSupabaseUrl.startsWith("https://")
   ? envSupabaseUrl.replace(/\/$/, "")

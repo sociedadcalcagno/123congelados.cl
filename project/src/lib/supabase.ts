@@ -4,7 +4,7 @@ const envSupabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseUrl =
   typeof envSupabaseUrl === "string" && envSupabaseUrl.startsWith("http")
     ? envSupabaseUrl
-    : "https://gacgollaafyecysczbs.supabase.co";
+    : "https://gacgollaafyecyszczbs.supabase.co";
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseAnonKey) {
