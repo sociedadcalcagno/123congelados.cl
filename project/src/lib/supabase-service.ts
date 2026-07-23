@@ -8,16 +8,29 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error("Falta VITE_SUPABASE_ANON_KEY en Netlify");
   }
 
-  const response = await fetch(`${SUPABASE_URL}${path}`, {
-    ...init,
-    headers: {
-      apikey: SUPABASE_KEY,
-      authorization: `Bearer ${SUPABASE_KEY}`,
-      "content-type": "application/json",
-      prefer: "return=representation",
-      ...(init?.headers ?? {}),
-    },
-  });
+  const url = `${SUPABASE_URL}${path}`;
+  let response: Response;
+
+  try {
+    response = await fetch(url, {
+      ...init,
+      headers: {
+        apikey: SUPABASE_KEY,
+        authorization: `Bearer ${SUPABASE_KEY}`,
+        "content-type": "application/json",
+        prefer: "return=representation",
+        ...(init?.headers ?? {}),
+      },
+    });
+  } catch (error) {
+    throw new Error(JSON.stringify({
+      message: "Fetch hacia Supabase falló antes de recibir respuesta",
+      url,
+      hasKey: Boolean(SUPABASE_KEY),
+      keyPrefix: SUPABASE_KEY ? SUPABASE_KEY.slice(0, 12) : null,
+      cause: error instanceof Error ? error.message : String(error),
+    }));
+  }
 
   const text = await response.text();
   const payload = text ? JSON.parse(text) : null;
