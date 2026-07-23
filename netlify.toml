@@ -3,9 +3,6 @@
   command = "npm install && npm run build"
   publish = "dist"
 
-[functions]
-  directory = "netlify/functions"
-
 [[headers]]
   for = "/*"
   [headers.values]

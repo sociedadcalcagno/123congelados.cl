@@ -1,10 +1,20 @@
 import type { Product, Order, Customer, InventoryMovement } from "./data";
 
+const SUPABASE_URL = "https://gacgollaafyecysczbs.supabase.co";
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`/.netlify/functions/supabase-proxy?path=${encodeURIComponent(path)}`, {
+  if (!SUPABASE_KEY) {
+    throw new Error("Falta VITE_SUPABASE_ANON_KEY en Netlify");
+  }
+
+  const response = await fetch(`${SUPABASE_URL}${path}`, {
     ...init,
     headers: {
+      apikey: SUPABASE_KEY,
+      authorization: `Bearer ${SUPABASE_KEY}`,
       "content-type": "application/json",
+      prefer: "return=representation",
       ...(init?.headers ?? {}),
     },
   });
