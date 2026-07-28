@@ -1,6 +1,11 @@
 import type { Product, Order, Customer, InventoryMovement } from "./data";
+import { supabase } from "./supabase";
 
-const SUPABASE_URL = "https://gacgollaafyecyszczbs.supabase.co";
+const envSupabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_URL =
+  typeof envSupabaseUrl === "string" && envSupabaseUrl.startsWith("http")
+    ? envSupabaseUrl.replace(/\/$/, "")
+    : "https://gacgollaafyecyszczbs.supabase.co";
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -9,6 +14,9 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   const url = `${SUPABASE_URL}${path}`;
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  const bearerToken = accessToken || SUPABASE_KEY;
   let response: Response;
 
   try {
@@ -16,7 +24,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
       ...init,
       headers: {
         apikey: SUPABASE_KEY,
-        authorization: `Bearer ${SUPABASE_KEY}`,
+        authorization: `Bearer ${bearerToken}`,
         "content-type": "application/json",
         prefer: "return=representation",
         ...(init?.headers ?? {}),

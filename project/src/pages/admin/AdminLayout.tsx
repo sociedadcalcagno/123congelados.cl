@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Package, Warehouse, ShoppingBag, Users,
   BarChart3, Tag, LogOut, Fish, ChevronRight, Bell
@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { ModeToggle } from "@/components/mode-toggle";
 import { getOrders, getProducts } from "@/lib/supabase-service";
+import { supabase } from "@/lib/supabase";
 
 const NAV_ITEMS = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
 
 export function AdminLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [pendingOrders, setPendingOrders] = useState(0);
   const [lowStockCount, setLowStockCount] = useState(0);
   const [outOfStockCount, setOutOfStockCount] = useState(0);
@@ -40,6 +42,11 @@ export function AdminLayout() {
       setOutOfStockCount(products.filter((p) => p.stock === 0).length);
     });
   }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/admin/login", { replace: true });
+  };
 
   return (
     <SidebarProvider defaultOpen>
@@ -161,6 +168,9 @@ export function AdminLayout() {
               </Button>
             )}
             <ModeToggle />
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              Salir
+            </Button>
             <div className="size-8 rounded-full bg-primary flex items-center justify-center">
               <span className="text-xs font-bold text-primary-foreground">AD</span>
             </div>

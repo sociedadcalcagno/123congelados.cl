@@ -6,9 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
-
-const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || "admin@congelados.cl";
-const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || "123Congelados2026!";
+import { supabase } from "@/lib/supabase";
 
 export function AdminLogin() {
   const [email, setEmail] = useState("");
@@ -19,12 +17,19 @@ export function AdminLogin() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
     setLoading(false);
-    if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
+
+    if (error) {
       toast.error("Credenciales incorrectas");
       return;
     }
-    localStorage.setItem("123congelados-admin", "true");
+
     navigate("/admin");
   };
 
