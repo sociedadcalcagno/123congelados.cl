@@ -30,6 +30,7 @@ export function AdminLogin() {
       return;
     }
 
+    localStorage.setItem("123congelados-admin", "true");
     navigate("/admin");
   };
 

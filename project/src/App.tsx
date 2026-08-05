@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Navigate, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 
 // Storefront
@@ -77,6 +77,8 @@ export function App() {
           <Route path="ventas" element={<AdminSales />} />
           <Route path="promociones" element={<AdminPromotions />} />
         </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
       <Toaster position="bottom-right" richColors />

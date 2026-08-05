@@ -44,6 +44,7 @@ export function AdminLayout() {
   }, []);
 
   const handleLogout = async () => {
+    localStorage.removeItem("123congelados-admin");
     await supabase.auth.signOut();
     navigate("/admin/login", { replace: true });
   };
