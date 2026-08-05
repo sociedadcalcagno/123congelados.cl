@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Search, Edit, Trash2, Snowflake, Package } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Snowflake, Package, ListTree } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -10,15 +10,18 @@ import {
 import { formatCLP, getCategoryLabel } from "@/lib/data";
 import type { Product } from "@/lib/data";
 import { getProducts, deleteProduct, createProduct, updateProduct } from "@/lib/supabase-service";
+import type { ProductVariant, ProductWithVariants } from "@/lib/supabase-service";
 import { ProductFormDialog } from "@/components/admin/ProductFormDialog";
+import { ProductVariantsDialog } from "@/components/admin/ProductVariantsDialog";
 import { toast } from "sonner";
 
 export function AdminProducts() {
   const [search, setSearch] = useState("");
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductWithVariants[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [variantsProduct, setVariantsProduct] = useState<ProductWithVariants | null>(null);
 
   useEffect(() => {
     getProducts()
@@ -43,6 +46,10 @@ export function AdminProducts() {
     await deleteProduct(id);
     setProducts((prev) => prev.filter((p) => p.id !== id));
     toast.success("Producto eliminado");
+  };
+
+  const handleVariantsChange = (productId: string, variants: ProductVariant[]) => {
+    setProducts((prev) => prev.map((product) => product.id === productId ? { ...product, variants } : product));
   };
 
   const handleSave = async (data: Omit<Product, "id">) => {
@@ -186,6 +193,15 @@ export function AdminProducts() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="size-8"
+                          title="Calibres"
+                          onClick={() => setVariantsProduct(product)}
+                        >
+                          <ListTree className="size-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="size-8 text-destructive hover:text-destructive"
                           onClick={() => handleDelete(product.id)}
                         >
@@ -206,6 +222,12 @@ export function AdminProducts() {
         onOpenChange={setDialogOpen}
         product={editing}
         onSave={handleSave}
+      />
+      <ProductVariantsDialog
+        open={!!variantsProduct}
+        onOpenChange={(open) => !open && setVariantsProduct(null)}
+        product={variantsProduct}
+        onChange={(variants) => variantsProduct && handleVariantsChange(variantsProduct.id, variants)}
       />
     </div>
   );

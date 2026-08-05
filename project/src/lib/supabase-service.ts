@@ -8,6 +8,21 @@ const SUPABASE_URL =
     : "https://gacgollaafyecyszczbs.supabase.co";
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+export interface ProductVariant {
+  id: string;
+  product_id: string;
+  name: string;
+  price: number;
+  stock: number;
+  unit: string;
+  weight: string;
+  active: boolean;
+}
+
+export type ProductWithVariants = Product & {
+  variants?: ProductVariant[];
+};
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   if (!SUPABASE_KEY) {
     throw new Error("Falta VITE_SUPABASE_ANON_KEY en Netlify");
@@ -51,8 +66,8 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 // ---------- Products ----------
-export async function getProducts(): Promise<Product[]> {
-  return apiFetch<Product[]>("/rest/v1/products?select=*&order=name.asc");
+export async function getProducts(): Promise<ProductWithVariants[]> {
+  return apiFetch<ProductWithVariants[]>("/rest/v1/products?select=*,variants:product_variants(*)&order=name.asc");
 }
 
 export async function createProduct(product: Omit<Product, "id">): Promise<Product> {
@@ -73,6 +88,26 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
 
 export async function deleteProduct(id: string): Promise<void> {
   await apiFetch(`/rest/v1/products?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export async function createProductVariant(variant: Omit<ProductVariant, "id">): Promise<ProductVariant> {
+  const data = await apiFetch<ProductVariant[]>("/rest/v1/product_variants?select=*", {
+    method: "POST",
+    body: JSON.stringify({ id: `v${Date.now()}`, ...variant }),
+  });
+  return data[0];
+}
+
+export async function updateProductVariant(id: string, updates: Partial<ProductVariant>): Promise<ProductVariant> {
+  const data = await apiFetch<ProductVariant[]>(`/rest/v1/product_variants?id=eq.${encodeURIComponent(id)}&select=*`, {
+    method: "PATCH",
+    body: JSON.stringify(updates),
+  });
+  return data[0];
+}
+
+export async function deleteProductVariant(id: string): Promise<void> {
+  await apiFetch(`/rest/v1/product_variants?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 // ---------- Orders ----------

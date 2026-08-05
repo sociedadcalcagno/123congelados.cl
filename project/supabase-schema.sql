@@ -22,6 +22,19 @@ create table products (
   created_at timestamptz default now()
 );
 
+-- 1.1 VARIANTES / CALIBRES VENDIBLES POR PRODUCTO
+create table product_variants (
+  id text primary key,
+  product_id text not null references products(id) on delete cascade,
+  name text not null,
+  price numeric not null,
+  stock integer not null default 0,
+  unit text not null default 'kg',
+  weight text not null,
+  active boolean not null default true,
+  created_at timestamptz default now()
+);
+
 -- 2. ORDENES
 create table orders (
   id text primary key,
@@ -117,6 +130,13 @@ insert into products (id, name, category, price, "originalPrice", stock, "minSto
   ('p10', 'Merluza Filetes Congelados', 'congelados', 7990, null, 55, 20, 'kg', '1 kg', '/product-congelados.webp', 'Filetes de merluza congelados IQF.', false, null, 'Chile', true),
   ('p11', 'Salmón Porciones 200g', 'salmon', 5990, null, 80, 20, 'paq', '200g', '/product-salmon.webp', 'Porciones individuales de salmón.', false, null, 'Chile', true),
   ('p12', 'Calamar Entero Limpio', 'mariscos', 11990, null, 3, 8, 'kg', '1 kg', '/product-mariscos.webp', 'Calamar del Pacífico limpio y sin tinta.', false, null, 'Perú/Chile', true);
+
+insert into product_variants (id, product_id, name, price, stock, unit, weight, active) values
+  ('v1', 'p1', 'Porción 200g', 5990, 80, 'paq', '200g', true),
+  ('v2', 'p1', 'Filete 1kg', 14500, 35, 'kg', '1 kg', true),
+  ('v3', 'p1', 'Entero por kg', 9800, 20, 'kg', '1 kg', true),
+  ('v4', 'p3', 'Camarón jumbo 16/20', 15990, 60, 'kg', '1 kg', true),
+  ('v5', 'p3', 'Camarón pelado XL', 19990, 35, 'kg', '1 kg', true);
 
 insert into orders (id, customer, email, phone, address, total, status, date, "paymentMethod") values
   ('ORD-2025-001', 'María González', 'maria.gonzalez@gmail.com', '+56 9 8765 4321', 'Av. Providencia 1234, Santiago', 53970, 'entregado', '2025-05-14', 'Tarjeta'),

@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { formatCLP, getCategoryLabel } from "@/lib/data";
 import type { Category, Product } from "@/lib/data";
 import { getProducts } from "@/lib/supabase-service";
+import type { ProductWithVariants, ProductVariant } from "@/lib/supabase-service";
 import { useCart } from "@/lib/cart-store";
 import { toast } from "sonner";
 
@@ -28,7 +29,8 @@ export function CatalogPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortOption>("featured");
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductWithVariants[]>([]);
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [selectedCategory, setSelectedCategory] = useState<Category | "all">(
     (searchParams.get("cat") as Category) || "all"
   );
@@ -86,10 +88,31 @@ export function CatalogPage() {
     setSearchParams(searchParams);
   };
 
-  const handleAdd = (product: Product) => {
-    addItem(product);
-    toast.success(`${product.name} agregado`, {
-      description: formatCLP(product.price),
+  const getSelectedVariant = (product: ProductWithVariants): ProductVariant | undefined => {
+    const variants = product.variants?.filter((variant) => variant.active) ?? [];
+    if (variants.length === 0) return undefined;
+    return variants.find((variant) => variant.id === selectedVariants[product.id]) ?? variants[0];
+  };
+
+  const getSellableProduct = (product: ProductWithVariants): Product => {
+    const variant = getSelectedVariant(product);
+    if (!variant) return product;
+    return {
+      ...product,
+      id: `${product.id}:${variant.id}`,
+      name: `${product.name} - ${variant.name}`,
+      price: variant.price,
+      stock: variant.stock,
+      unit: variant.unit,
+      weight: variant.weight,
+    };
+  };
+
+  const handleAdd = (product: ProductWithVariants) => {
+    const sellable = getSellableProduct(product);
+    addItem(sellable);
+    toast.success(`${sellable.name} agregado`, {
+      description: formatCLP(sellable.price),
     });
   };
 
@@ -204,7 +227,15 @@ export function CatalogPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-12">
-            {filtered.map((product) => (
+            {filtered.map((product) => {
+              const activeVariants = product.variants?.filter((variant) => variant.active) ?? [];
+              const selectedVariant = getSelectedVariant(product);
+              const price = selectedVariant?.price ?? product.price;
+              const stock = selectedVariant?.stock ?? product.stock;
+              const unit = selectedVariant?.unit ?? product.unit;
+              const weight = selectedVariant?.weight ?? product.weight;
+
+              return (
               <Card
                 key={product.id}
                 className="group overflow-hidden shadow-card-hover border-0 shadow-ocean bg-card"
@@ -220,14 +251,14 @@ export function CatalogPage() {
                       {product.badge}
                     </Badge>
                   )}
-                  {product.stock === 0 && (
+                  {stock === 0 && (
                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                       <Badge variant="outline" className="text-white border-white bg-black/50 text-sm px-4 py-1">
                         Sin Stock
                       </Badge>
                     </div>
                   )}
-                  {product.stock > 0 && product.stock <= product.minStock && (
+                  {stock > 0 && stock <= product.minStock && (
                     <Badge
                       variant="destructive"
                       className="absolute top-3 right-3 text-xs"
@@ -262,11 +293,31 @@ export function CatalogPage() {
                     <span className="text-xs text-muted-foreground ml-1">(5.0)</span>
                   </div>
 
+                  {activeVariants.length > 0 && (
+                    <div className="mb-3">
+                      <Select
+                        value={selectedVariant?.id ?? activeVariants[0]?.id}
+                        onValueChange={(value) => setSelectedVariants((prev) => ({ ...prev, [product.id]: value }))}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Selecciona calibre" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {activeVariants.map((variant) => (
+                            <SelectItem key={variant.id} value={variant.id}>
+                              {variant.name} · {formatCLP(variant.price)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
                   <div className="flex items-end justify-between gap-3">
                     <div>
                       <div className="flex items-baseline gap-1.5">
                         <span className="text-xl font-extrabold text-primary">
-                          {formatCLP(product.price)}
+                          {formatCLP(price)}
                         </span>
                         {product.originalPrice && (
                           <span className="text-xs text-muted-foreground line-through">
@@ -275,14 +326,14 @@ export function CatalogPage() {
                         )}
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        por {product.unit} · {product.weight}
+                        por {unit} · {weight}
                       </span>
                     </div>
                     <Button
                       size="sm"
                       className="gap-1.5 bg-aqua-gradient text-white hover:opacity-90 transition-opacity flex-shrink-0 px-3"
                       onClick={() => handleAdd(product)}
-                      disabled={product.stock === 0}
+                      disabled={stock === 0}
                     >
                       <ShoppingCart className="size-3.5" />
                       <span className="hidden sm:inline">Agregar</span>
@@ -291,27 +342,27 @@ export function CatalogPage() {
 
                   <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
                     <div className={`flex items-center gap-1.5 text-xs font-medium ${
-                      product.stock === 0
+                      stock === 0
                         ? "text-destructive"
-                        : product.stock <= product.minStock
+                        : stock <= product.minStock
                         ? "text-yellow-600 dark:text-yellow-400"
                         : "text-green-600 dark:text-green-400"
                     }`}>
                       <div className={`size-2 rounded-full ${
-                        product.stock === 0 ? "bg-destructive" :
-                        product.stock <= product.minStock ? "bg-yellow-500" : "bg-green-500"
+                        stock === 0 ? "bg-destructive" :
+                        stock <= product.minStock ? "bg-yellow-500" : "bg-green-500"
                       }`} />
-                      {product.stock === 0
+                      {stock === 0
                         ? "Sin stock"
-                        : product.stock <= product.minStock
-                        ? `${product.stock} disponibles`
+                        : stock <= product.minStock
+                        ? `${stock} disponibles`
                         : "En stock"}
                     </div>
                     <span className="text-xs text-muted-foreground">{product.origin}</span>
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            );})}
           </div>
         )}
       </div>

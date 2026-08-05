@@ -5,6 +5,7 @@
 
 -- Habilitar RLS en todas las tablas
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_variants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
@@ -28,6 +29,15 @@ CREATE POLICY "products_select" ON products FOR SELECT USING (true);
 CREATE POLICY "products_insert" ON products FOR INSERT TO authenticated WITH CHECK (true);
 CREATE POLICY "products_update" ON products FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "products_delete" ON products FOR DELETE TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "product_variants_select" ON product_variants;
+DROP POLICY IF EXISTS "product_variants_insert" ON product_variants;
+DROP POLICY IF EXISTS "product_variants_update" ON product_variants;
+DROP POLICY IF EXISTS "product_variants_delete" ON product_variants;
+CREATE POLICY "product_variants_select" ON product_variants FOR SELECT USING (true);
+CREATE POLICY "product_variants_insert" ON product_variants FOR INSERT WITH CHECK (true);
+CREATE POLICY "product_variants_update" ON product_variants FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "product_variants_delete" ON product_variants FOR DELETE USING (true);
 
 DROP POLICY IF EXISTS "orders_select" ON orders;
 DROP POLICY IF EXISTS "orders_insert" ON orders;

@@ -11,6 +11,8 @@ import { formatCLP, getCategoryLabel } from "@/lib/data";
 import { useCart } from "@/lib/cart-store";
 import type { Product, Category } from "@/lib/data";
 import { getProducts } from "@/lib/supabase-service";
+import type { ProductWithVariants, ProductVariant } from "@/lib/supabase-service";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
 const CATEGORIES: { id: Category; label: string; emoji: string; desc: string }[] = [
@@ -21,13 +23,31 @@ const CATEGORIES: { id: Category; label: string; emoji: string; desc: string }[]
   { id: "congelados", label: "Congelados", emoji: "❄️", desc: "Premium Packs" },
 ];
 
-function ProductCard({ product }: { product: Product }) {
+function ProductCard({ product }: { product: ProductWithVariants }) {
   const { addItem } = useCart();
+  const activeVariants = product.variants?.filter((variant) => variant.active) ?? [];
+  const [selectedVariantId, setSelectedVariantId] = useState(activeVariants[0]?.id ?? "");
+  const selectedVariant: ProductVariant | undefined = activeVariants.find((variant) => variant.id === selectedVariantId) ?? activeVariants[0];
+  const price = selectedVariant?.price ?? product.price;
+  const stock = selectedVariant?.stock ?? product.stock;
+  const unit = selectedVariant?.unit ?? product.unit;
+  const weight = selectedVariant?.weight ?? product.weight;
 
   const handleAdd = () => {
-    addItem(product);
-    toast.success(`${product.name} agregado al carrito`, {
-      description: formatCLP(product.price),
+    const sellableProduct: Product = selectedVariant
+      ? {
+          ...product,
+          id: `${product.id}:${selectedVariant.id}`,
+          name: `${product.name} - ${selectedVariant.name}`,
+          price: selectedVariant.price,
+          stock: selectedVariant.stock,
+          unit: selectedVariant.unit,
+          weight: selectedVariant.weight,
+        }
+      : product;
+    addItem(sellableProduct);
+    toast.success(`${sellableProduct.name} agregado al carrito`, {
+      description: formatCLP(sellableProduct.price),
     });
   };
 
@@ -44,7 +64,7 @@ function ProductCard({ product }: { product: Product }) {
             {product.badge}
           </Badge>
         )}
-        {product.stock <= product.minStock && (
+        {stock <= product.minStock && (
           <Badge variant="destructive" className="absolute top-3 right-3">
             Pocas unidades
           </Badge>
@@ -60,18 +80,35 @@ function ProductCard({ product }: { product: Product }) {
             <h3 className="font-semibold text-sm leading-tight line-clamp-2 group-hover:text-primary transition-colors">
               {product.name}
             </h3>
-            <p className="text-xs text-muted-foreground mt-1">{product.weight}</p>
+            <p className="text-xs text-muted-foreground mt-1">{weight}</p>
           </div>
           {product.coldChain && (
             <Snowflake className="size-4 text-primary flex-shrink-0 mt-1" />
           )}
         </div>
 
+        {activeVariants.length > 0 && (
+          <div className="mt-3">
+            <Select value={selectedVariant?.id} onValueChange={setSelectedVariantId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecciona calibre" />
+              </SelectTrigger>
+              <SelectContent>
+                {activeVariants.map((variant) => (
+                  <SelectItem key={variant.id} value={variant.id}>
+                    {variant.name} · {formatCLP(variant.price)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <div className="flex items-end justify-between mt-3 gap-2">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-primary">
-                {formatCLP(product.price)}
+                {formatCLP(price)}
               </span>
               {product.originalPrice && (
                 <span className="text-xs text-muted-foreground line-through">
@@ -79,13 +116,13 @@ function ProductCard({ product }: { product: Product }) {
                 </span>
               )}
             </div>
-            <span className="text-xs text-muted-foreground">/ {product.unit}</span>
+            <span className="text-xs text-muted-foreground">/ {unit}</span>
           </div>
           <Button
             size="sm"
             className="gap-1 bg-aqua-gradient text-white hover:opacity-90 transition-opacity flex-shrink-0"
             onClick={handleAdd}
-            disabled={product.stock === 0}
+            disabled={stock === 0}
           >
             <ShoppingCart className="size-3" />
             Agregar
@@ -94,17 +131,17 @@ function ProductCard({ product }: { product: Product }) {
 
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
           <span className={`text-xs font-medium ${
-            product.stock === 0
+            stock === 0
               ? "text-destructive"
-              : product.stock <= product.minStock
+              : stock <= product.minStock
               ? "text-yellow-600"
               : "text-green-600"
           }`}>
-            {product.stock === 0
+            {stock === 0
               ? "Sin stock"
-              : product.stock <= product.minStock
-              ? `Solo ${product.stock} disponibles`
-              : `Stock: ${product.stock} ${product.unit}`}
+              : stock <= product.minStock
+              ? `Solo ${stock} disponibles`
+              : `Stock: ${stock} ${unit}`}
           </span>
           <div className="flex items-center gap-0.5">
             {[...Array(5)].map((_, i) => (
@@ -118,7 +155,7 @@ function ProductCard({ product }: { product: Product }) {
 }
 
 export function LandingPage() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductWithVariants[]>([]);
 
   useEffect(() => {
     getProducts().then(setProducts);
