@@ -1,10 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 
-const envSupabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseUrl =
-  typeof envSupabaseUrl === "string" && envSupabaseUrl.startsWith("http")
-    ? envSupabaseUrl
-    : "https://gacgollaafyecyszczbs.supabase.co";
+const supabaseUrl = "https://gacgollaafyecyszczbs.supabase.co";
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseAnonKey) {

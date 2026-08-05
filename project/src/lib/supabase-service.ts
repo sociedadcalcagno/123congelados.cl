@@ -1,11 +1,7 @@
 import type { Product, Order, Customer, InventoryMovement } from "./data";
 import { supabase } from "./supabase";
 
-const envSupabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_URL =
-  typeof envSupabaseUrl === "string" && envSupabaseUrl.startsWith("http")
-    ? envSupabaseUrl.replace(/\/$/, "")
-    : "https://gacgollaafyecyszczbs.supabase.co";
+const SUPABASE_URL = "https://gacgollaafyecyszczbs.supabase.co";
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export interface ProductVariant {
