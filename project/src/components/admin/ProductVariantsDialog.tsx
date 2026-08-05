@@ -20,6 +20,7 @@ interface ProductVariantsDialogProps {
 
 export function ProductVariantsDialog({ open, onOpenChange, product, onChange }: ProductVariantsDialogProps) {
   const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setVariants(product?.variants ?? []);
@@ -28,35 +29,51 @@ export function ProductVariantsDialog({ open, onOpenChange, product, onChange }:
   if (!product) return null;
 
   const handleAdd = async () => {
-    const created = await createProductVariant({
-      product_id: product.id,
-      name: "Nuevo calibre",
-      price: product.price,
-      stock: 0,
-      unit: product.unit,
-      weight: product.weight,
-      active: true,
-    });
-    const next = [...variants, created];
-    setVariants(next);
-    onChange(next);
-    toast.success("Calibre creado");
+    setSaving(true);
+    try {
+      const created = await createProductVariant({
+        product_id: product.id,
+        name: "Nuevo calibre",
+        price: product.price,
+        stock: 0,
+        unit: product.unit,
+        weight: product.weight,
+        active: true,
+      });
+      const next = [...variants, created];
+      setVariants(next);
+      onChange(next);
+      toast.success("Calibre creado");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No se pudo crear el calibre";
+      toast.error(message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleUpdate = async (id: string, updates: Partial<ProductVariant>) => {
-    const updated = await updateProductVariant(id, updates);
-    const next = variants.map((variant) => (variant.id === id ? updated : variant));
-    setVariants(next);
-    onChange(next);
-    toast.success("Calibre actualizado");
+    try {
+      const updated = await updateProductVariant(id, updates);
+      const next = variants.map((variant) => (variant.id === id ? updated : variant));
+      setVariants(next);
+      onChange(next);
+      toast.success("Calibre actualizado");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo actualizar el calibre");
+    }
   };
 
   const handleDelete = async (id: string) => {
-    await deleteProductVariant(id);
-    const next = variants.filter((variant) => variant.id !== id);
-    setVariants(next);
-    onChange(next);
-    toast.success("Calibre eliminado");
+    try {
+      await deleteProductVariant(id);
+      const next = variants.filter((variant) => variant.id !== id);
+      setVariants(next);
+      onChange(next);
+      toast.success("Calibre eliminado");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo eliminar el calibre");
+    }
   };
 
   return (
@@ -110,9 +127,9 @@ export function ProductVariantsDialog({ open, onOpenChange, product, onChange }:
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cerrar</Button>
-          <Button type="button" onClick={handleAdd} className="gap-2 bg-aqua-gradient text-white">
+          <Button type="button" onClick={handleAdd} disabled={saving} className="gap-2 bg-aqua-gradient text-white">
             <Plus className="size-4" />
-            Agregar calibre
+            {saving ? "Creando..." : "Agregar calibre"}
           </Button>
         </DialogFooter>
       </DialogContent>
