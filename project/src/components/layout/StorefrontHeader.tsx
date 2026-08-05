@@ -33,6 +33,9 @@ export function StorefrontHeader() {
                 className="h-10 w-auto object-contain"
               />
             </div>
+            <span className="rounded-full bg-primary px-3 py-1 text-xs font-extrabold text-primary-foreground shadow-sm">
+              Berry
+            </span>
           </Link>
 
           {/* Desktop Nav */}

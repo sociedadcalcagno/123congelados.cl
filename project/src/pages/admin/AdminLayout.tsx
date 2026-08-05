@@ -58,7 +58,7 @@ export function AdminLayout() {
             </div>
             <div>
               <p className="font-bold text-sidebar-foreground text-sm leading-none">123 Congelados</p>
-              <p className="text-xs text-sidebar-foreground/60 mt-0.5">Panel Administrador</p>
+              <p className="text-xs text-sidebar-foreground/60 mt-0.5">Panel Administrador · Berry</p>
             </div>
           </div>
         </SidebarHeader>
