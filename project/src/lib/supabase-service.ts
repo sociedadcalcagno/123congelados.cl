@@ -63,7 +63,22 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 
 // ---------- Products ----------
 export async function getProducts(): Promise<ProductWithVariants[]> {
-  return apiFetch<ProductWithVariants[]>("/rest/v1/products?select=*,variants:product_variants(*)&order=name.asc");
+  const products = await apiFetch<Product[]>("/rest/v1/products?select=*&order=name.asc");
+
+  try {
+    const variants = await apiFetch<ProductVariant[]>("/rest/v1/product_variants?select=*");
+    const variantsByProduct = variants.reduce<Record<string, ProductVariant[]>>((acc, variant) => {
+      acc[variant.product_id] = [...(acc[variant.product_id] ?? []), variant];
+      return acc;
+    }, {});
+
+    return products.map((product) => ({
+      ...product,
+      variants: variantsByProduct[product.id] ?? [],
+    }));
+  } catch {
+    return products.map((product) => ({ ...product, variants: [] }));
+  }
 }
 
 export async function createProduct(product: Omit<Product, "id">): Promise<Product> {
