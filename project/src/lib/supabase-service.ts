@@ -121,6 +121,20 @@ export async function deleteProductVariant(id: string): Promise<void> {
   await apiFetch(`/rest/v1/product_variants?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
+export async function uploadProductImage(file: File): Promise<string> {
+  const fileExtension = file.name.split(".").pop()?.toLowerCase() || "webp";
+  const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExtension}`;
+  const { data, error } = await supabase.storage.from("products").upload(fileName, file, {
+    cacheControl: "3600",
+    upsert: false,
+  });
+
+  if (error) throw error;
+
+  const { data: publicUrl } = supabase.storage.from("products").getPublicUrl(data.path);
+  return publicUrl.publicUrl;
+}
+
 // ---------- Orders ----------
 export async function getOrders(): Promise<Order[]> {
   return apiFetch<Order[]>("/rest/v1/orders?select=*&order=date.desc");

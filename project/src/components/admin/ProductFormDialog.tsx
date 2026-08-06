@@ -11,6 +11,8 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
 import type { Product, Category } from "@/lib/data";
+import { uploadProductImage } from "@/lib/supabase-service";
+import { toast } from "sonner";
 
 interface ProductFormDialogProps {
   open: boolean;
@@ -29,6 +31,7 @@ const CATEGORIES: { value: Category; label: string }[] = [
 
 export function ProductFormDialog({ open, onOpenChange, product, onSave }: ProductFormDialogProps) {
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState({
     name: "",
     category: "salmon" as Category,
@@ -97,6 +100,26 @@ export function ProductFormDialog({ open, onOpenChange, product, onSave }: Produ
       onOpenChange(false);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleImageUpload = async (file: File | undefined) => {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecciona un archivo de imagen");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const imageUrl = await uploadProductImage(file);
+      setForm((current) => ({ ...current, image: imageUrl }));
+      toast.success("Imagen subida");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo subir la imagen");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -169,6 +192,22 @@ export function ProductFormDialog({ open, onOpenChange, product, onSave }: Produ
               <Label>Imagen (ruta)</Label>
               <Input value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} />
             </div>
+            <div className="space-y-2">
+              <Label>Subir imagen</Label>
+              <Input
+                type="file"
+                accept="image/*"
+                disabled={uploading}
+                onChange={(e) => handleImageUpload(e.target.files?.[0])}
+              />
+              {uploading && <p className="text-xs text-muted-foreground">Subiendo imagen...</p>}
+            </div>
+            {form.image && (
+              <div className="sm:col-span-2 rounded-lg border p-3">
+                <Label>Vista previa</Label>
+                <img src={form.image} alt="Vista previa" className="mt-2 h-32 w-full rounded-md object-cover" />
+              </div>
+            )}
             <div className="sm:col-span-2 space-y-2">
               <Label>Descripción</Label>
               <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
