@@ -295,21 +295,17 @@ export function CatalogPage() {
 
                   {activeVariants.length > 0 && (
                     <div className="mb-3">
-                      <Select
+                      <select
                         value={selectedVariant?.id ?? activeVariants[0]?.id}
-                        onValueChange={(value) => setSelectedVariants((prev) => ({ ...prev, [product.id]: value }))}
+                        onChange={(event) => setSelectedVariants((prev) => ({ ...prev, [product.id]: event.target.value }))}
+                        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                       >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Selecciona calibre" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {activeVariants.map((variant) => (
-                            <SelectItem key={variant.id} value={variant.id}>
-                              {variant.name} · {formatCLP(variant.price)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        {activeVariants.map((variant) => (
+                          <option key={variant.id} value={variant.id}>
+                            {variant.name} - {formatCLP(variant.price)}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   )}
 

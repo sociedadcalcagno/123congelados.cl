@@ -12,7 +12,6 @@ import { useCart } from "@/lib/cart-store";
 import type { Product, Category } from "@/lib/data";
 import { getProducts } from "@/lib/supabase-service";
 import type { ProductWithVariants, ProductVariant } from "@/lib/supabase-service";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
 const CATEGORIES: { id: Category; label: string; emoji: string; desc: string }[] = [
@@ -89,18 +88,17 @@ function ProductCard({ product }: { product: ProductWithVariants }) {
 
         {activeVariants.length > 0 && (
           <div className="mt-3">
-            <Select value={selectedVariant?.id} onValueChange={setSelectedVariantId}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecciona calibre" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeVariants.map((variant) => (
-                  <SelectItem key={variant.id} value={variant.id}>
-                    {variant.name} · {formatCLP(variant.price)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              value={selectedVariant?.id ?? activeVariants[0]?.id}
+              onChange={(event) => setSelectedVariantId(event.target.value)}
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            >
+              {activeVariants.map((variant) => (
+                <option key={variant.id} value={variant.id}>
+                  {variant.name} - {formatCLP(variant.price)}
+                </option>
+              ))}
+            </select>
           </div>
         )}
 
