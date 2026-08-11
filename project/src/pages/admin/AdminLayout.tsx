@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Package, Warehouse, ShoppingBag, Users,
-  BarChart3, Tag, LogOut, Fish, ChevronRight, Bell
+  BarChart3, Tag, LogOut, Fish, ChevronRight, Bell, FileText
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarHeader,
@@ -24,6 +24,7 @@ const NAV_ITEMS = [
   { to: "/admin/clientes", label: "Clientes", icon: Users },
   { to: "/admin/ventas", label: "Ventas", icon: BarChart3 },
   { to: "/admin/promociones", label: "Promociones", icon: Tag },
+  { to: "/admin/lista-express", label: "Lista Express", icon: FileText },
 ];
 
 export function AdminLayout() {

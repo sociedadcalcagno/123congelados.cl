@@ -19,6 +19,7 @@ import { AdminOrders } from "@/pages/admin/AdminOrders";
 import { AdminCustomers } from "@/pages/admin/AdminCustomers";
 import { AdminSales } from "@/pages/admin/AdminSales";
 import { AdminPromotions } from "@/pages/admin/AdminPromotions";
+import { AdminPriceList } from "@/pages/admin/AdminPriceList";
 import { AdminLogin } from "@/pages/admin/AdminLogin";
 import { AuthGuard } from "@/components/AuthGuard";
 
@@ -76,6 +77,7 @@ export function App() {
           <Route path="clientes" element={<AdminCustomers />} />
           <Route path="ventas" element={<AdminSales />} />
           <Route path="promociones" element={<AdminPromotions />} />
+          <Route path="lista-express" element={<AdminPriceList />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

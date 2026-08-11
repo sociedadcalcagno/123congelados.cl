@@ -42,6 +42,30 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+@media print {
+  body {
+    background: white !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .price-sheet,
+  .price-sheet * {
+    visibility: visible;
+  }
+
+  .price-sheet {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    max-width: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+}
+
 :root {
   --radius: 0.75rem;
 
