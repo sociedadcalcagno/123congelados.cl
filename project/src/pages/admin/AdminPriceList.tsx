@@ -21,6 +21,7 @@ export function AdminPriceList() {
   const [selectedCategories, setSelectedCategories] = useState<Category[]>(CATEGORIES);
   const [includeOutOfStock, setIncludeOutOfStock] = useState(false);
   const [onlyFeatured, setOnlyFeatured] = useState(false);
+  const [exporting, setExporting] = useState<"png" | "jpeg" | "pdf" | null>(null);
   const priceSheetRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export function AdminPriceList() {
             unit: variant.unit,
             weight: variant.weight,
             badge: product.badge,
+            image: product.image,
           }));
         }
 
@@ -57,6 +59,7 @@ export function AdminPriceList() {
           unit: product.unit,
           weight: product.weight,
           badge: product.badge,
+          image: product.image,
         }];
       })
       .filter((row) => includeOutOfStock || row.stock > 0)
@@ -107,48 +110,70 @@ export function AdminPriceList() {
 
   const downloadImage = async (format: "png" | "jpeg") => {
     if (!priceSheetRef.current) return;
+    setExporting(format);
+    toast.info(`Generando ${format === "png" ? "PNG" : "JPG"}...`);
 
-    const canvas = await html2canvas(priceSheetRef.current, {
-      backgroundColor: "#ffffff",
-      scale: 2,
-      useCORS: true,
-    });
-    const mime = format === "png" ? "image/png" : "image/jpeg";
-    const extension = format === "png" ? "png" : "jpg";
-    const url = canvas.toDataURL(mime, 0.95);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `lista-express-123congelados.${extension}`;
-    link.click();
+    try {
+      const canvas = await html2canvas(priceSheetRef.current, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true,
+        imageTimeout: 15000,
+      });
+      const mime = format === "png" ? "image/png" : "image/jpeg";
+      const extension = format === "png" ? "png" : "jpg";
+      const url = canvas.toDataURL(mime, 0.95);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `catalogo-123congelados.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success(`${format === "png" ? "PNG" : "JPG"} descargado`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo descargar la imagen");
+    } finally {
+      setExporting(null);
+    }
   };
 
   const downloadPdf = async () => {
     if (!priceSheetRef.current) return;
+    setExporting("pdf");
+    toast.info("Generando PDF...");
 
-    const canvas = await html2canvas(priceSheetRef.current, {
-      backgroundColor: "#ffffff",
-      scale: 2,
-      useCORS: true,
-    });
-    const imageData = canvas.toDataURL("image/jpeg", 0.95);
-    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const imageWidth = pageWidth;
-    const imageHeight = (canvas.height * imageWidth) / canvas.width;
-    let y = 0;
+    try {
+      const canvas = await html2canvas(priceSheetRef.current, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true,
+        imageTimeout: 15000,
+      });
+      const imageData = canvas.toDataURL("image/jpeg", 0.95);
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imageWidth = pageWidth;
+      const imageHeight = (canvas.height * imageWidth) / canvas.width;
+      let y = 0;
 
-    if (imageHeight <= pageHeight) {
-      pdf.addImage(imageData, "JPEG", 0, 0, imageWidth, imageHeight);
-    } else {
-      while (Math.abs(y) < imageHeight) {
-        pdf.addImage(imageData, "JPEG", 0, y, imageWidth, imageHeight);
-        y -= pageHeight;
-        if (Math.abs(y) < imageHeight) pdf.addPage();
+      if (imageHeight <= pageHeight) {
+        pdf.addImage(imageData, "JPEG", 0, 0, imageWidth, imageHeight);
+      } else {
+        while (Math.abs(y) < imageHeight) {
+          pdf.addImage(imageData, "JPEG", 0, y, imageWidth, imageHeight);
+          y -= pageHeight;
+          if (Math.abs(y) < imageHeight) pdf.addPage();
+        }
       }
-    }
 
-    pdf.save("lista-express-123congelados.pdf");
+      pdf.save("catalogo-123congelados.pdf");
+      toast.success("PDF descargado");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo descargar el PDF");
+    } finally {
+      setExporting(null);
+    }
   };
 
   return (
@@ -163,26 +188,26 @@ export function AdminPriceList() {
             <Copy className="size-4" />
             Copiar WhatsApp
           </Button>
-          <Button variant="outline" className="gap-2" onClick={() => downloadImage("png")}>
+          <Button variant="outline" className="gap-2" disabled={!!exporting} onClick={() => downloadImage("png")}>
             <Download className="size-4" />
-            Descargar PNG
+            {exporting === "png" ? "Generando..." : "Descargar PNG"}
           </Button>
-          <Button variant="outline" className="gap-2" onClick={() => downloadImage("jpeg")}>
+          <Button variant="outline" className="gap-2" disabled={!!exporting} onClick={() => downloadImage("jpeg")}>
             <Download className="size-4" />
-            Descargar JPG
+            {exporting === "jpeg" ? "Generando..." : "Descargar JPG"}
           </Button>
-          <Button className="gap-2 bg-aqua-gradient text-white" onClick={downloadPdf}>
+          <Button className="gap-2 bg-aqua-gradient text-white" disabled={!!exporting} onClick={downloadPdf}>
             <Printer className="size-4" />
-            Descargar PDF
+            {exporting === "pdf" ? "Generando..." : "Descargar PDF"}
           </Button>
         </div>
       </div>
 
       <Card className="border-cyan-200 bg-cyan-50/60 shadow-ocean print:hidden">
         <CardContent className="p-4">
-          <p className="text-sm font-semibold text-cyan-900">Vista previa de exportación</p>
+          <p className="text-sm font-semibold text-cyan-900">Preview del catálogo exportable</p>
           <p className="text-sm text-cyan-800/80">
-            La pieza que ves abajo es exactamente lo que se descarga como PNG, JPG o PDF para enviar por WhatsApp.
+            Esta pieza visual incluye las imágenes y precios actuales del sistema. Esto mismo se descarga como PNG, JPG o PDF.
           </p>
         </CardContent>
       </Card>
@@ -238,28 +263,49 @@ export function AdminPriceList() {
           </div>
         </div>
 
-        <div className="mt-6 space-y-6">
+        <div className="mt-6 space-y-7">
           {CATEGORIES.map((category) => {
             const categoryRows = groupedRows[category] ?? [];
             if (categoryRows.length === 0) return null;
             return (
-              <div key={category} className="overflow-hidden rounded-2xl border border-sky-100">
-                <div className="bg-slate-950 px-4 py-3 text-white">
-                  <h3 className="text-lg font-black uppercase tracking-wide">{getCategoryLabel(category)}</h3>
+              <div key={category} className="rounded-3xl border border-sky-100 bg-slate-50/80 p-4">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <h3 className="rounded-full bg-slate-950 px-5 py-2 text-lg font-black uppercase tracking-wide text-white">
+                    {getCategoryLabel(category)}
+                  </h3>
+                  <span className="text-xs font-bold uppercase tracking-wide text-cyan-700">
+                    {categoryRows.length} opciones
+                  </span>
                 </div>
-                <div className="divide-y divide-slate-100">
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
                   {categoryRows.map((row, index) => (
-                    <div key={`${row.product}-${row.detail}-${index}`} className="grid grid-cols-[1fr_auto] gap-4 px-4 py-3">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-bold text-slate-950">{row.product}</p>
+                    <div key={`${row.product}-${row.detail}-${index}`} className="overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-sm">
+                      <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+                        <img
+                          src={row.image}
+                          alt={row.product}
+                          crossOrigin="anonymous"
+                          className="h-full w-full object-cover"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/80 to-transparent p-3">
+                          <p className="line-clamp-2 text-sm font-black leading-tight text-white">{row.product}</p>
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <div className="flex min-h-12 items-start justify-between gap-2">
+                          <div>
+                            <p className="text-xs font-semibold text-slate-500">{row.detail}</p>
+                            <p className="text-xs text-slate-400">{row.weight} · Stock {row.stock}</p>
+                          </div>
                           {row.badge && <Badge className="bg-cyan-100 text-cyan-800 hover:bg-cyan-100">{row.badge}</Badge>}
                         </div>
-                        <p className="text-sm text-slate-500">{row.detail} · {row.weight} · Stock {row.stock}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xl font-black text-cyan-700">{formatCLP(row.price)}</p>
-                        <p className="text-xs text-slate-500">/{row.unit}</p>
+                        <div className="mt-3 flex items-end justify-between gap-2 border-t border-slate-100 pt-3">
+                          <div>
+                            <p className="text-2xl font-black text-cyan-700">{formatCLP(row.price)}</p>
+                            <p className="text-xs text-slate-500">/{row.unit}</p>
+                          </div>
+                          <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white">Pedir</span>
+                        </div>
                       </div>
                     </div>
                   ))}
