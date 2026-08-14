@@ -14,6 +14,7 @@ import type { ProductWithVariants } from "@/lib/supabase-service";
 import { toast } from "sonner";
 
 const CATEGORIES: Category[] = ["salmon", "camarones", "mariscos", "reineta", "congelados"];
+const CATALOG_BRAND_IMAGE = "/WhatsApp_Image_2026-05-15_at_7.15.28_AM.jpeg";
 
 type CatalogRow = {
   category: Category;
@@ -198,7 +199,8 @@ export function AdminPriceList() {
     const columns = 3;
     const cardWidth = (width - margin * 2 - gap * (columns - 1)) / columns;
     const cardHeight = 390;
-    let height = 320;
+    const heroHeight = 500;
+    let height = heroHeight + 90;
 
     for (const category of CATEGORIES) {
       const categoryRows = groupedRows[category] ?? [];
@@ -213,46 +215,37 @@ export function AdminPriceList() {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("No se pudo crear el canvas de exportación");
 
-    ctx.fillStyle = "#ffffff";
+    const brandImage = await loadCanvasImage(CATALOG_BRAND_IMAGE);
+
+    ctx.fillStyle = "#effaff";
     ctx.fillRect(0, 0, width, height);
-    ctx.fillStyle = "#075985";
-    ctx.fillRect(0, 0, width, 18);
 
-    fillRoundedRect(ctx, margin, 56, 76, 76, 24, "#0891b2");
+    if (brandImage) {
+      ctx.save();
+      ctx.globalAlpha = 0.07;
+      drawCoverImage(ctx, brandImage, 0, heroHeight - 40, width, height - heroHeight + 40);
+      ctx.restore();
+
+      fillRoundedRect(ctx, margin, 34, width - margin * 2, heroHeight - 68, 34, "#ffffff");
+      ctx.save();
+      roundedRect(ctx, margin, 34, width - margin * 2, heroHeight - 68, 34);
+      ctx.clip();
+      drawCoverImage(ctx, brandImage, margin, 34, width - margin * 2, heroHeight - 68);
+      ctx.restore();
+      strokeRoundedRect(ctx, margin, 34, width - margin * 2, heroHeight - 68, 34, "#082f49");
+    }
+
+    fillRoundedRect(ctx, margin, heroHeight - 42, width - margin * 2, 86, 30, "#020617");
     ctx.fillStyle = "#ffffff";
-    ctx.font = "700 42px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("*", margin + 38, 107);
-    ctx.textAlign = "left";
-
-    ctx.fillStyle = "#020617";
-    ctx.font = "900 42px Arial";
-    ctx.fillText("123 Congelados", margin + 96, 88);
-    ctx.fillStyle = "#0e7490";
-    ctx.font = "700 22px Arial";
-    ctx.fillText("Catálogo Express Berry", margin + 98, 121);
-
-    fillRoundedRect(ctx, width - margin - 340, 56, 340, 118, 26, "#ecfeff");
-    ctx.fillStyle = "#0e7490";
-    ctx.font = "900 18px Arial";
+    ctx.font = "900 34px Arial";
+    ctx.fillText("Catálogo de productos disponibles", margin + 34, heroHeight + 12);
+    ctx.fillStyle = "#67e8f9";
+    ctx.font = "700 20px Arial";
     ctx.textAlign = "right";
-    ctx.fillText("PEDIDOS", width - margin - 28, 94);
-    ctx.fillStyle = "#020617";
-    ctx.font = "900 36px Arial";
-    ctx.fillText("+56 9 9538 7455", width - margin - 28, 132);
-    ctx.fillStyle = "#64748b";
-    ctx.font = "18px Arial";
-    ctx.fillText("Precios sujetos a stock", width - margin - 28, 158);
+    ctx.fillText("Precios sujetos a stock", width - margin - 34, heroHeight + 12);
     ctx.textAlign = "left";
 
-    ctx.fillStyle = "#020617";
-    ctx.font = "900 54px Arial";
-    ctx.fillText("Precios del mar directo a tu hogar", margin, 230);
-    ctx.fillStyle = "#64748b";
-    ctx.font = "24px Arial";
-    ctx.fillText("Productos congelados, frescos y listos para tu pedido.", margin, 270);
-
-    let y = 330;
+    let y = heroHeight + 76;
     for (const category of CATEGORIES) {
       const categoryRows = groupedRows[category] ?? [];
       if (categoryRows.length === 0) continue;
@@ -477,6 +470,13 @@ export function AdminPriceList() {
 
       <section ref={priceSheetRef} className="price-sheet mx-auto max-w-4xl overflow-hidden rounded-[2rem] border bg-white text-slate-950 shadow-ocean print:shadow-none print:border-0">
         <div data-export-bg="topbar" className="h-3 bg-gradient-to-r from-cyan-500 via-sky-700 to-slate-950" />
+        <div className="bg-cyan-50 p-4">
+          <img
+            src={CATALOG_BRAND_IMAGE}
+            alt="123 Congelados"
+            className="h-auto w-full rounded-[1.5rem] border-4 border-slate-950 object-cover"
+          />
+        </div>
         <div className="p-6">
         <div className="flex items-start justify-between gap-4 border-b border-sky-200 pb-5">
           <div>
