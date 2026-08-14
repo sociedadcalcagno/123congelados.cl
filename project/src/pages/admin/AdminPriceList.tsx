@@ -118,10 +118,11 @@ export function AdminPriceList() {
     return products
       .filter((product) => selectedCategories.includes(product.category))
       .filter((product) => !onlyFeatured || product.featured)
-      .flatMap((product) => {
+      .map((product) => {
         const variants = product.variants?.filter((variant) => variant.active) ?? [];
         if (variants.length > 0) {
-          return variants.map((variant) => ({
+          const variant = [...variants].sort((a, b) => b.price - a.price)[0];
+          return {
             category: product.category,
             product: product.name,
             detail: variant.name,
@@ -131,10 +132,10 @@ export function AdminPriceList() {
             weight: variant.weight,
             badge: product.badge,
             image: product.image,
-          }));
+          };
         }
 
-        return [{
+        return {
           category: product.category,
           product: product.name,
           detail: product.weight,
@@ -144,7 +145,7 @@ export function AdminPriceList() {
           weight: product.weight,
           badge: product.badge,
           image: product.image,
-        }];
+        };
       })
       .filter((row) => includeOutOfStock || row.stock > 0)
       .sort((a, b) => getCategoryLabel(a.category).localeCompare(getCategoryLabel(b.category)) || a.product.localeCompare(b.product));
