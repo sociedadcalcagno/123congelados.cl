@@ -14,7 +14,7 @@ import type { ProductWithVariants } from "@/lib/supabase-service";
 import { toast } from "sonner";
 
 const CATEGORIES: Category[] = ["salmon", "camarones", "mariscos", "reineta", "congelados"];
-const CATALOG_BRAND_IMAGE = "/WhatsApp_Image_2026-05-15_at_7.15.28_AM.jpeg";
+const CATALOG_BRAND_IMAGE = "/catalogo123congelado.png";
 
 type CatalogRow = {
   category: Category;
@@ -199,7 +199,8 @@ export function AdminPriceList() {
     const columns = 3;
     const cardWidth = (width - margin * 2 - gap * (columns - 1)) / columns;
     const cardHeight = 390;
-    const heroHeight = 500;
+    const heroImageHeight = 696;
+    const heroHeight = heroImageHeight + 120;
     let height = heroHeight + 90;
 
     for (const category of CATEGORIES) {
@@ -226,23 +227,23 @@ export function AdminPriceList() {
       drawCoverImage(ctx, brandImage, 0, heroHeight - 40, width, height - heroHeight + 40);
       ctx.restore();
 
-      fillRoundedRect(ctx, margin, 34, width - margin * 2, heroHeight - 68, 34, "#ffffff");
+      fillRoundedRect(ctx, margin, 34, width - margin * 2, heroImageHeight, 34, "#ffffff");
       ctx.save();
-      roundedRect(ctx, margin, 34, width - margin * 2, heroHeight - 68, 34);
+      roundedRect(ctx, margin, 34, width - margin * 2, heroImageHeight, 34);
       ctx.clip();
-      drawCoverImage(ctx, brandImage, margin, 34, width - margin * 2, heroHeight - 68);
+      drawCoverImage(ctx, brandImage, margin, 34, width - margin * 2, heroImageHeight);
       ctx.restore();
-      strokeRoundedRect(ctx, margin, 34, width - margin * 2, heroHeight - 68, 34, "#082f49");
+      strokeRoundedRect(ctx, margin, 34, width - margin * 2, heroImageHeight, 34, "#082f49");
     }
 
-    fillRoundedRect(ctx, margin, heroHeight - 42, width - margin * 2, 86, 30, "#020617");
+    fillRoundedRect(ctx, margin, heroImageHeight + 58, width - margin * 2, 86, 30, "#020617");
     ctx.fillStyle = "#ffffff";
     ctx.font = "900 34px Arial";
-    ctx.fillText("Catálogo de productos disponibles", margin + 34, heroHeight + 12);
+    ctx.fillText("Catálogo de productos disponibles", margin + 34, heroImageHeight + 112);
     ctx.fillStyle = "#67e8f9";
     ctx.font = "700 20px Arial";
     ctx.textAlign = "right";
-    ctx.fillText("Precios sujetos a stock", width - margin - 34, heroHeight + 12);
+    ctx.fillText("Precios sujetos a stock", width - margin - 34, heroImageHeight + 112);
     ctx.textAlign = "left";
 
     let y = heroHeight + 76;
