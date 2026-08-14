@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
-import { Copy, Printer, Snowflake, MessageCircle } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import html2canvas from "html2canvas";
+import { Copy, Download, Printer, Snowflake, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -19,6 +20,7 @@ export function AdminPriceList() {
   const [selectedCategories, setSelectedCategories] = useState<Category[]>(CATEGORIES);
   const [includeOutOfStock, setIncludeOutOfStock] = useState(false);
   const [onlyFeatured, setOnlyFeatured] = useState(false);
+  const priceSheetRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     getProducts().then(setProducts).catch((error) => {
@@ -102,6 +104,23 @@ export function AdminPriceList() {
     toast.success("Texto copiado para WhatsApp");
   };
 
+  const downloadImage = async (format: "png" | "jpeg") => {
+    if (!priceSheetRef.current) return;
+
+    const canvas = await html2canvas(priceSheetRef.current, {
+      backgroundColor: "#ffffff",
+      scale: 2,
+      useCORS: true,
+    });
+    const mime = format === "png" ? "image/png" : "image/jpeg";
+    const extension = format === "png" ? "png" : "jpg";
+    const url = canvas.toDataURL(mime, 0.95);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `lista-express-123congelados.${extension}`;
+    link.click();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -113,6 +132,14 @@ export function AdminPriceList() {
           <Button variant="outline" className="gap-2" onClick={copyText}>
             <Copy className="size-4" />
             Copiar WhatsApp
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={() => downloadImage("png")}>
+            <Download className="size-4" />
+            Descargar PNG
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={() => downloadImage("jpeg")}>
+            <Download className="size-4" />
+            Descargar JPG
           </Button>
           <Button className="gap-2 bg-aqua-gradient text-white" onClick={() => window.print()}>
             <Printer className="size-4" />
@@ -148,7 +175,7 @@ export function AdminPriceList() {
         </CardContent>
       </Card>
 
-      <section className="price-sheet mx-auto max-w-4xl rounded-3xl border bg-white p-6 text-slate-950 shadow-ocean print:shadow-none print:border-0">
+      <section ref={priceSheetRef} className="price-sheet mx-auto max-w-4xl rounded-3xl border bg-white p-6 text-slate-950 shadow-ocean print:shadow-none print:border-0">
         <div className="flex items-start justify-between gap-4 border-b border-sky-200 pb-5">
           <div>
             <div className="flex items-center gap-3">
