@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { Copy, Download, Printer, Snowflake, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +15,90 @@ import { toast } from "sonner";
 
 const CATEGORIES: Category[] = ["salmon", "camarones", "mariscos", "reineta", "congelados"];
 
+type CatalogRow = {
+  category: Category;
+  product: string;
+  detail: string;
+  price: number;
+  stock: number;
+  unit: string;
+  weight: string;
+  badge?: string;
+  image: string;
+};
+
+const loadCanvasImage = (src: string) => new Promise<HTMLImageElement | null>((resolve) => {
+  if (!src) {
+    resolve(null);
+    return;
+  }
+
+  const image = new Image();
+  image.crossOrigin = "anonymous";
+  image.onload = () => resolve(image);
+  image.onerror = () => resolve(null);
+  image.src = src;
+});
+
+const roundedRect = (ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) => {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+};
+
+const fillRoundedRect = (ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number, color: string) => {
+  roundedRect(ctx, x, y, width, height, radius);
+  ctx.fillStyle = color;
+  ctx.fill();
+};
+
+const strokeRoundedRect = (ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number, color: string) => {
+  roundedRect(ctx, x, y, width, height, radius);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+};
+
+const drawWrappedText = (ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, maxLines = 2) => {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let currentLine = "";
+
+  words.forEach((word) => {
+    const nextLine = currentLine ? `${currentLine} ${word}` : word;
+    if (ctx.measureText(nextLine).width <= maxWidth) {
+      currentLine = nextLine;
+      return;
+    }
+    if (currentLine) lines.push(currentLine);
+    currentLine = word;
+  });
+
+  if (currentLine) lines.push(currentLine);
+
+  lines.slice(0, maxLines).forEach((line, index) => {
+    const finalLine = index === maxLines - 1 && lines.length > maxLines ? `${line.replace(/\s+\S+$/, "")}...` : line;
+    ctx.fillText(finalLine, x, y + index * lineHeight);
+  });
+};
+
+const drawCoverImage = (ctx: CanvasRenderingContext2D, image: HTMLImageElement, x: number, y: number, width: number, height: number) => {
+  const scale = Math.max(width / image.width, height / image.height);
+  const sourceWidth = width / scale;
+  const sourceHeight = height / scale;
+  const sourceX = (image.width - sourceWidth) / 2;
+  const sourceY = (image.height - sourceHeight) / 2;
+  ctx.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, x, y, width, height);
+};
+
 export function AdminPriceList() {
   const [products, setProducts] = useState<ProductWithVariants[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<Category[]>(CATEGORIES);
@@ -30,7 +113,7 @@ export function AdminPriceList() {
     });
   }, []);
 
-  const rows = useMemo(() => {
+  const rows = useMemo<CatalogRow[]>(() => {
     return products
       .filter((product) => selectedCategories.includes(product.category))
       .filter((product) => !onlyFeatured || product.featured)
@@ -108,67 +191,163 @@ export function AdminPriceList() {
     toast.success("Texto copiado para WhatsApp");
   };
 
-  const applyExportSafeStyles = (documentClone: Document) => {
-    const sheet = documentClone.querySelector(".price-sheet") as HTMLElement | null;
-    if (!sheet) return;
+  const captureCatalogCanvas = async () => {
+    const width = 1200;
+    const margin = 56;
+    const gap = 24;
+    const columns = 3;
+    const cardWidth = (width - margin * 2 - gap * (columns - 1)) / columns;
+    const cardHeight = 390;
+    let height = 320;
 
-    const elements = [sheet, ...Array.from(sheet.querySelectorAll<HTMLElement>("*"))];
-    elements.forEach((element) => {
-      element.style.backgroundImage = "none";
-      element.style.boxShadow = "none";
-      element.style.textShadow = "none";
-      element.style.color = "#0f172a";
-      element.style.borderColor = "#bae6fd";
-      element.style.outlineColor = "#bae6fd";
-      if (element.tagName !== "IMG") element.style.backgroundColor = "transparent";
-    });
+    for (const category of CATEGORIES) {
+      const categoryRows = groupedRows[category] ?? [];
+      if (categoryRows.length === 0) continue;
+      height += 86 + Math.ceil(categoryRows.length / columns) * (cardHeight + gap) + 28;
+    }
+    height += 130;
 
-    sheet.style.backgroundColor = "#ffffff";
-    sheet.style.borderColor = "#bae6fd";
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("No se pudo crear el canvas de exportación");
 
-    documentClone.querySelectorAll<HTMLElement>("[data-export-bg='topbar']").forEach((element) => {
-      element.style.backgroundColor = "#075985";
-    });
-    documentClone.querySelectorAll<HTMLElement>("[data-export-bg='logo']").forEach((element) => {
-      element.style.backgroundColor = "#0891b2";
-      element.style.color = "#ffffff";
-    });
-    documentClone.querySelectorAll<HTMLElement>("[data-export-bg='light']").forEach((element) => {
-      element.style.backgroundColor = "#ecfeff";
-    });
-    documentClone.querySelectorAll<HTMLElement>("[data-export-bg='section']").forEach((element) => {
-      element.style.backgroundColor = "#f8fafc";
-    });
-    documentClone.querySelectorAll<HTMLElement>("[data-export-bg='dark']").forEach((element) => {
-      element.style.backgroundColor = "#020617";
-      element.style.color = "#ffffff";
-    });
-    documentClone.querySelectorAll<HTMLElement>("[data-export-bg='badge']").forEach((element) => {
-      element.style.backgroundColor = "#cffafe";
-      element.style.color = "#155e75";
-    });
-    documentClone.querySelectorAll<HTMLElement>("[data-export-color='cyan']").forEach((element) => {
-      element.style.color = "#0e7490";
-    });
-    documentClone.querySelectorAll<HTMLElement>("[data-export-color='muted']").forEach((element) => {
-      element.style.color = "#64748b";
-    });
-    documentClone.querySelectorAll<HTMLElement>("[data-export-color='white']").forEach((element) => {
-      element.style.color = "#ffffff";
-    });
-  };
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = "#075985";
+    ctx.fillRect(0, 0, width, 18);
 
-  const captureCatalogCanvas = () => {
-    if (!priceSheetRef.current) return null;
+    fillRoundedRect(ctx, margin, 56, 76, 76, 24, "#0891b2");
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "700 42px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("*", margin + 38, 107);
+    ctx.textAlign = "left";
 
-    return html2canvas(priceSheetRef.current, {
-      backgroundColor: "#ffffff",
-      scale: 2,
-      useCORS: true,
-      allowTaint: false,
-      imageTimeout: 15000,
-      onclone: applyExportSafeStyles,
-    });
+    ctx.fillStyle = "#020617";
+    ctx.font = "900 42px Arial";
+    ctx.fillText("123 Congelados", margin + 96, 88);
+    ctx.fillStyle = "#0e7490";
+    ctx.font = "700 22px Arial";
+    ctx.fillText("Catálogo Express Berry", margin + 98, 121);
+
+    fillRoundedRect(ctx, width - margin - 340, 56, 340, 118, 26, "#ecfeff");
+    ctx.fillStyle = "#0e7490";
+    ctx.font = "900 18px Arial";
+    ctx.textAlign = "right";
+    ctx.fillText("PEDIDOS", width - margin - 28, 94);
+    ctx.fillStyle = "#020617";
+    ctx.font = "900 36px Arial";
+    ctx.fillText("+56 9 9538 7455", width - margin - 28, 132);
+    ctx.fillStyle = "#64748b";
+    ctx.font = "18px Arial";
+    ctx.fillText("Precios sujetos a stock", width - margin - 28, 158);
+    ctx.textAlign = "left";
+
+    ctx.fillStyle = "#020617";
+    ctx.font = "900 54px Arial";
+    ctx.fillText("Precios del mar directo a tu hogar", margin, 230);
+    ctx.fillStyle = "#64748b";
+    ctx.font = "24px Arial";
+    ctx.fillText("Productos congelados, frescos y listos para tu pedido.", margin, 270);
+
+    let y = 330;
+    for (const category of CATEGORIES) {
+      const categoryRows = groupedRows[category] ?? [];
+      if (categoryRows.length === 0) continue;
+
+      const sectionHeight = 86 + Math.ceil(categoryRows.length / columns) * (cardHeight + gap);
+      fillRoundedRect(ctx, margin, y, width - margin * 2, sectionHeight, 34, "#f8fafc");
+      strokeRoundedRect(ctx, margin, y, width - margin * 2, sectionHeight, 34, "#bae6fd");
+
+      fillRoundedRect(ctx, margin + 24, y + 24, 260, 42, 21, "#020617");
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "900 22px Arial";
+      ctx.fillText(getCategoryLabel(category).toUpperCase(), margin + 48, y + 53);
+      ctx.fillStyle = "#0e7490";
+      ctx.font = "900 16px Arial";
+      ctx.textAlign = "right";
+      ctx.fillText(`${categoryRows.length} opciones`, width - margin - 30, y + 51);
+      ctx.textAlign = "left";
+
+      await Promise.all(categoryRows.map((row, index) => loadCanvasImage(row.image).then((image) => ({ row, index, image })))).then((items) => {
+        items.forEach(({ row, index, image }) => {
+          const column = index % columns;
+          const rowIndex = Math.floor(index / columns);
+          const x = margin + 24 + column * (cardWidth + gap);
+          const cardY = y + 86 + rowIndex * (cardHeight + gap);
+          const imageHeight = 210;
+
+          fillRoundedRect(ctx, x, cardY, cardWidth, cardHeight, 28, "#ffffff");
+          strokeRoundedRect(ctx, x, cardY, cardWidth, cardHeight, 28, "#e0f2fe");
+          ctx.save();
+          roundedRect(ctx, x, cardY, cardWidth, imageHeight, 28);
+          ctx.clip();
+          if (image) {
+            drawCoverImage(ctx, image, x, cardY, cardWidth, imageHeight);
+          } else {
+            ctx.fillStyle = "#e0f2fe";
+            ctx.fillRect(x, cardY, cardWidth, imageHeight);
+            ctx.fillStyle = "#0e7490";
+            ctx.font = "900 22px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("123 Congelados", x + cardWidth / 2, cardY + 112);
+            ctx.textAlign = "left";
+          }
+          ctx.restore();
+
+          const gradient = ctx.createLinearGradient(0, cardY + 110, 0, cardY + imageHeight);
+          gradient.addColorStop(0, "rgba(2, 6, 23, 0)");
+          gradient.addColorStop(1, "rgba(2, 6, 23, 0.88)");
+          ctx.fillStyle = gradient;
+          ctx.fillRect(x, cardY + 90, cardWidth, 120);
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "900 22px Arial";
+          drawWrappedText(ctx, row.product, x + 20, cardY + 158, cardWidth - 40, 26, 2);
+
+          ctx.fillStyle = "#64748b";
+          ctx.font = "700 18px Arial";
+          ctx.fillText(row.detail, x + 20, cardY + 250);
+          ctx.font = "16px Arial";
+          ctx.fillText(`${row.weight} · Stock ${row.stock}`, x + 20, cardY + 278);
+
+          ctx.strokeStyle = "#e2e8f0";
+          ctx.beginPath();
+          ctx.moveTo(x + 20, cardY + 302);
+          ctx.lineTo(x + cardWidth - 20, cardY + 302);
+          ctx.stroke();
+
+          ctx.fillStyle = "#0e7490";
+          ctx.font = "900 34px Arial";
+          ctx.fillText(formatCLP(row.price), x + 20, cardY + 348);
+          ctx.fillStyle = "#64748b";
+          ctx.font = "16px Arial";
+          ctx.fillText(`/${row.unit}`, x + 20, cardY + 372);
+
+          fillRoundedRect(ctx, x + cardWidth - 102, cardY + 334, 78, 34, 17, "#020617");
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "900 15px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText("Pedir", x + cardWidth - 63, cardY + 357);
+          ctx.textAlign = "left";
+        });
+      });
+
+      y += sectionHeight + 28;
+    }
+
+    fillRoundedRect(ctx, margin, y + 10, width - margin * 2, 84, 26, "#ecfeff");
+    ctx.fillStyle = "#0e7490";
+    ctx.font = "900 24px Arial";
+    ctx.fillText("Haz tu pedido por WhatsApp", margin + 30, y + 62);
+    ctx.fillStyle = "#64748b";
+    ctx.font = "20px Arial";
+    ctx.textAlign = "right";
+    ctx.fillText("Despacho rápido, seguro y confiable.", width - margin - 30, y + 62);
+    ctx.textAlign = "left";
+
+    return canvas;
   };
 
   const downloadImage = async (format: "png" | "jpeg") => {
@@ -190,6 +369,7 @@ export function AdminPriceList() {
       link.remove();
       toast.success(`${format === "png" ? "PNG" : "JPG"} descargado`);
     } catch (error) {
+      console.error("Error descargando catálogo como imagen", error);
       toast.error(error instanceof Error ? error.message : "No se pudo descargar la imagen");
     } finally {
       setExporting(null);
@@ -225,6 +405,7 @@ export function AdminPriceList() {
       pdf.save("catalogo-123congelados.pdf");
       toast.success("PDF descargado");
     } catch (error) {
+      console.error("Error descargando catálogo como PDF", error);
       toast.error(error instanceof Error ? error.message : "No se pudo descargar el PDF");
     } finally {
       setExporting(null);
