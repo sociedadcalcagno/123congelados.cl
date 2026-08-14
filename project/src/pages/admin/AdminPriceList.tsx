@@ -108,18 +108,77 @@ export function AdminPriceList() {
     toast.success("Texto copiado para WhatsApp");
   };
 
+  const applyExportSafeStyles = (documentClone: Document) => {
+    const sheet = documentClone.querySelector(".price-sheet") as HTMLElement | null;
+    if (!sheet) return;
+
+    const elements = [sheet, ...Array.from(sheet.querySelectorAll<HTMLElement>("*"))];
+    elements.forEach((element) => {
+      element.style.backgroundImage = "none";
+      element.style.boxShadow = "none";
+      element.style.textShadow = "none";
+      element.style.color = "#0f172a";
+      element.style.borderColor = "#bae6fd";
+      element.style.outlineColor = "#bae6fd";
+      if (element.tagName !== "IMG") element.style.backgroundColor = "transparent";
+    });
+
+    sheet.style.backgroundColor = "#ffffff";
+    sheet.style.borderColor = "#bae6fd";
+
+    documentClone.querySelectorAll<HTMLElement>("[data-export-bg='topbar']").forEach((element) => {
+      element.style.backgroundColor = "#075985";
+    });
+    documentClone.querySelectorAll<HTMLElement>("[data-export-bg='logo']").forEach((element) => {
+      element.style.backgroundColor = "#0891b2";
+      element.style.color = "#ffffff";
+    });
+    documentClone.querySelectorAll<HTMLElement>("[data-export-bg='light']").forEach((element) => {
+      element.style.backgroundColor = "#ecfeff";
+    });
+    documentClone.querySelectorAll<HTMLElement>("[data-export-bg='section']").forEach((element) => {
+      element.style.backgroundColor = "#f8fafc";
+    });
+    documentClone.querySelectorAll<HTMLElement>("[data-export-bg='dark']").forEach((element) => {
+      element.style.backgroundColor = "#020617";
+      element.style.color = "#ffffff";
+    });
+    documentClone.querySelectorAll<HTMLElement>("[data-export-bg='badge']").forEach((element) => {
+      element.style.backgroundColor = "#cffafe";
+      element.style.color = "#155e75";
+    });
+    documentClone.querySelectorAll<HTMLElement>("[data-export-color='cyan']").forEach((element) => {
+      element.style.color = "#0e7490";
+    });
+    documentClone.querySelectorAll<HTMLElement>("[data-export-color='muted']").forEach((element) => {
+      element.style.color = "#64748b";
+    });
+    documentClone.querySelectorAll<HTMLElement>("[data-export-color='white']").forEach((element) => {
+      element.style.color = "#ffffff";
+    });
+  };
+
+  const captureCatalogCanvas = () => {
+    if (!priceSheetRef.current) return null;
+
+    return html2canvas(priceSheetRef.current, {
+      backgroundColor: "#ffffff",
+      scale: 2,
+      useCORS: true,
+      allowTaint: false,
+      imageTimeout: 15000,
+      onclone: applyExportSafeStyles,
+    });
+  };
+
   const downloadImage = async (format: "png" | "jpeg") => {
     if (!priceSheetRef.current) return;
     setExporting(format);
     toast.info(`Generando ${format === "png" ? "PNG" : "JPG"}...`);
 
     try {
-      const canvas = await html2canvas(priceSheetRef.current, {
-        backgroundColor: "#ffffff",
-        scale: 2,
-        useCORS: true,
-        imageTimeout: 15000,
-      });
+      const canvas = await captureCatalogCanvas();
+      if (!canvas) return;
       const mime = format === "png" ? "image/png" : "image/jpeg";
       const extension = format === "png" ? "png" : "jpg";
       const url = canvas.toDataURL(mime, 0.95);
@@ -143,12 +202,8 @@ export function AdminPriceList() {
     toast.info("Generando PDF...");
 
     try {
-      const canvas = await html2canvas(priceSheetRef.current, {
-        backgroundColor: "#ffffff",
-        scale: 2,
-        useCORS: true,
-        imageTimeout: 15000,
-      });
+      const canvas = await captureCatalogCanvas();
+      if (!canvas) return;
       const imageData = canvas.toDataURL("image/jpeg", 0.95);
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const pageWidth = pdf.internal.pageSize.getWidth();
@@ -240,26 +295,26 @@ export function AdminPriceList() {
       </Card>
 
       <section ref={priceSheetRef} className="price-sheet mx-auto max-w-4xl overflow-hidden rounded-[2rem] border bg-white text-slate-950 shadow-ocean print:shadow-none print:border-0">
-        <div className="h-3 bg-gradient-to-r from-cyan-500 via-sky-700 to-slate-950" />
+        <div data-export-bg="topbar" className="h-3 bg-gradient-to-r from-cyan-500 via-sky-700 to-slate-950" />
         <div className="p-6">
         <div className="flex items-start justify-between gap-4 border-b border-sky-200 pb-5">
           <div>
             <div className="flex items-center gap-3">
-              <div className="size-12 rounded-2xl bg-cyan-600 flex items-center justify-center text-white">
+              <div data-export-bg="logo" className="size-12 rounded-2xl bg-cyan-600 flex items-center justify-center text-white">
                 <Snowflake className="size-7" />
               </div>
               <div>
                 <p className="text-2xl font-black tracking-tight">123 Congelados</p>
-                <p className="text-sm font-semibold text-cyan-700">Lista Express Berry</p>
+                <p data-export-color="cyan" className="text-sm font-semibold text-cyan-700">Catálogo Express Berry</p>
               </div>
             </div>
             <h2 className="mt-5 text-4xl font-black leading-tight text-slate-950">Precios del mar directo a tu hogar</h2>
-            <p className="mt-2 text-sm text-slate-600">Productos congelados, frescos y listos para tu pedido.</p>
+            <p data-export-color="muted" className="mt-2 text-sm text-slate-600">Productos congelados, frescos y listos para tu pedido.</p>
           </div>
-          <div className="rounded-2xl bg-cyan-50 p-4 text-right">
-            <p className="text-xs font-bold uppercase text-cyan-700">Pedidos</p>
+          <div data-export-bg="light" className="rounded-2xl bg-cyan-50 p-4 text-right">
+            <p data-export-color="cyan" className="text-xs font-bold uppercase text-cyan-700">Pedidos</p>
             <p className="text-2xl font-black text-slate-950">+56 9 9538 7455</p>
-            <p className="text-xs text-slate-500">Precios sujetos a stock</p>
+            <p data-export-color="muted" className="text-xs text-slate-500">Precios sujetos a stock</p>
           </div>
         </div>
 
@@ -268,12 +323,12 @@ export function AdminPriceList() {
             const categoryRows = groupedRows[category] ?? [];
             if (categoryRows.length === 0) return null;
             return (
-              <div key={category} className="rounded-3xl border border-sky-100 bg-slate-50/80 p-4">
+              <div key={category} data-export-bg="section" className="rounded-3xl border border-sky-100 bg-slate-50/80 p-4">
                 <div className="mb-4 flex items-center justify-between gap-3">
-                  <h3 className="rounded-full bg-slate-950 px-5 py-2 text-lg font-black uppercase tracking-wide text-white">
+                  <h3 data-export-bg="dark" className="rounded-full bg-slate-950 px-5 py-2 text-lg font-black uppercase tracking-wide text-white">
                     {getCategoryLabel(category)}
                   </h3>
-                  <span className="text-xs font-bold uppercase tracking-wide text-cyan-700">
+                  <span data-export-color="cyan" className="text-xs font-bold uppercase tracking-wide text-cyan-700">
                     {categoryRows.length} opciones
                   </span>
                 </div>
@@ -287,24 +342,24 @@ export function AdminPriceList() {
                           crossOrigin="anonymous"
                           className="h-full w-full object-cover"
                         />
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/80 to-transparent p-3">
-                          <p className="line-clamp-2 text-sm font-black leading-tight text-white">{row.product}</p>
+                        <div data-export-bg="dark" className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/80 to-transparent p-3">
+                          <p data-export-color="white" className="line-clamp-2 text-sm font-black leading-tight text-white">{row.product}</p>
                         </div>
                       </div>
                       <div className="p-3">
                         <div className="flex min-h-12 items-start justify-between gap-2">
                           <div>
-                            <p className="text-xs font-semibold text-slate-500">{row.detail}</p>
-                            <p className="text-xs text-slate-400">{row.weight} · Stock {row.stock}</p>
+                            <p data-export-color="muted" className="text-xs font-semibold text-slate-500">{row.detail}</p>
+                            <p data-export-color="muted" className="text-xs text-slate-400">{row.weight} · Stock {row.stock}</p>
                           </div>
-                          {row.badge && <Badge className="bg-cyan-100 text-cyan-800 hover:bg-cyan-100">{row.badge}</Badge>}
+                          {row.badge && <Badge data-export-bg="badge" className="bg-cyan-100 text-cyan-800 hover:bg-cyan-100">{row.badge}</Badge>}
                         </div>
                         <div className="mt-3 flex items-end justify-between gap-2 border-t border-slate-100 pt-3">
                           <div>
-                            <p className="text-2xl font-black text-cyan-700">{formatCLP(row.price)}</p>
-                            <p className="text-xs text-slate-500">/{row.unit}</p>
+                            <p data-export-color="cyan" className="text-2xl font-black text-cyan-700">{formatCLP(row.price)}</p>
+                            <p data-export-color="muted" className="text-xs text-slate-500">/{row.unit}</p>
                           </div>
-                          <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white">Pedir</span>
+                          <span data-export-bg="dark" className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white">Pedir</span>
                         </div>
                       </div>
                     </div>
@@ -315,12 +370,12 @@ export function AdminPriceList() {
           })}
         </div>
 
-        <div className="mt-6 flex items-center justify-between gap-4 rounded-2xl bg-cyan-50 p-4">
-          <div className="flex items-center gap-2 font-bold text-cyan-800">
+        <div data-export-bg="light" className="mt-6 flex items-center justify-between gap-4 rounded-2xl bg-cyan-50 p-4">
+          <div data-export-color="cyan" className="flex items-center gap-2 font-bold text-cyan-800">
             <MessageCircle className="size-5" />
             Haz tu pedido por WhatsApp
           </div>
-          <p className="text-sm text-slate-600">Despacho rápido, seguro y confiable.</p>
+          <p data-export-color="muted" className="text-sm text-slate-600">Despacho rápido, seguro y confiable.</p>
         </div>
         </div>
       </section>
