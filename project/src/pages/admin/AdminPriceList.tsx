@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import { Copy, Download, Printer, Snowflake, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -121,6 +122,35 @@ export function AdminPriceList() {
     link.click();
   };
 
+  const downloadPdf = async () => {
+    if (!priceSheetRef.current) return;
+
+    const canvas = await html2canvas(priceSheetRef.current, {
+      backgroundColor: "#ffffff",
+      scale: 2,
+      useCORS: true,
+    });
+    const imageData = canvas.toDataURL("image/jpeg", 0.95);
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imageWidth = pageWidth;
+    const imageHeight = (canvas.height * imageWidth) / canvas.width;
+    let y = 0;
+
+    if (imageHeight <= pageHeight) {
+      pdf.addImage(imageData, "JPEG", 0, 0, imageWidth, imageHeight);
+    } else {
+      while (Math.abs(y) < imageHeight) {
+        pdf.addImage(imageData, "JPEG", 0, y, imageWidth, imageHeight);
+        y -= pageHeight;
+        if (Math.abs(y) < imageHeight) pdf.addPage();
+      }
+    }
+
+    pdf.save("lista-express-123congelados.pdf");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -141,12 +171,21 @@ export function AdminPriceList() {
             <Download className="size-4" />
             Descargar JPG
           </Button>
-          <Button className="gap-2 bg-aqua-gradient text-white" onClick={() => window.print()}>
+          <Button className="gap-2 bg-aqua-gradient text-white" onClick={downloadPdf}>
             <Printer className="size-4" />
-            Imprimir / PDF
+            Descargar PDF
           </Button>
         </div>
       </div>
+
+      <Card className="border-cyan-200 bg-cyan-50/60 shadow-ocean print:hidden">
+        <CardContent className="p-4">
+          <p className="text-sm font-semibold text-cyan-900">Vista previa de exportación</p>
+          <p className="text-sm text-cyan-800/80">
+            La pieza que ves abajo es exactamente lo que se descarga como PNG, JPG o PDF para enviar por WhatsApp.
+          </p>
+        </CardContent>
+      </Card>
 
       <Card className="shadow-ocean border-0 print:hidden">
         <CardHeader>
@@ -175,7 +214,9 @@ export function AdminPriceList() {
         </CardContent>
       </Card>
 
-      <section ref={priceSheetRef} className="price-sheet mx-auto max-w-4xl rounded-3xl border bg-white p-6 text-slate-950 shadow-ocean print:shadow-none print:border-0">
+      <section ref={priceSheetRef} className="price-sheet mx-auto max-w-4xl overflow-hidden rounded-[2rem] border bg-white text-slate-950 shadow-ocean print:shadow-none print:border-0">
+        <div className="h-3 bg-gradient-to-r from-cyan-500 via-sky-700 to-slate-950" />
+        <div className="p-6">
         <div className="flex items-start justify-between gap-4 border-b border-sky-200 pb-5">
           <div>
             <div className="flex items-center gap-3">
@@ -234,6 +275,7 @@ export function AdminPriceList() {
             Haz tu pedido por WhatsApp
           </div>
           <p className="text-sm text-slate-600">Despacho rápido, seguro y confiable.</p>
+        </div>
         </div>
       </section>
     </div>
