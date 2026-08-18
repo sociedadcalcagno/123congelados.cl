@@ -137,7 +137,59 @@ export async function uploadProductImage(file: File): Promise<string> {
 
 // ---------- Orders ----------
 export async function getOrders(): Promise<Order[]> {
-  return apiFetch<Order[]>("/rest/v1/orders?select=*&order=date.desc");
+  const [orders, items] = await Promise.all([
+    apiFetch<Order[]>("/rest/v1/orders?select=*&order=date.desc"),
+    apiFetch<(Order["items"][number] & { orderId: string })[]>("/rest/v1/order_items?select=*"),
+  ]);
+
+  const itemsByOrder = items.reduce<Record<string, Order["items"]>>((acc, item) => {
+    const { orderId, ...orderItem } = item;
+    acc[orderId] = [...(acc[orderId] ?? []), orderItem];
+    return acc;
+  }, {});
+
+  return orders.map((order) => ({
+    ...order,
+    items: itemsByOrder[order.id] ?? [],
+  }));
+}
+
+export async function createOnlineOrder(order: Omit<Order, "id" | "status" | "date">): Promise<Order> {
+  const orderId = `WEB-${Date.now()}`;
+  const today = new Date().toISOString().slice(0, 10);
+  const [createdOrder] = await apiFetch<Omit<Order, "items">[]>("/rest/v1/orders?select=*", {
+    method: "POST",
+    body: JSON.stringify({
+      id: orderId,
+      customer: order.customer,
+      email: order.email,
+      phone: order.phone,
+      address: order.address,
+      total: order.total,
+      status: "pendiente",
+      date: today,
+      paymentMethod: order.paymentMethod,
+    }),
+  });
+
+  if (order.items.length > 0) {
+    await apiFetch("/rest/v1/order_items", {
+      method: "POST",
+      body: JSON.stringify(order.items.map((item, index) => ({
+        id: `${orderId}-${index + 1}`,
+        orderId,
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+        name: item.name,
+      }))),
+    });
+  }
+
+  return {
+    ...createdOrder,
+    items: order.items,
+  };
 }
 
 export async function updateOrderStatus(id: string, status: Order["status"]): Promise<void> {

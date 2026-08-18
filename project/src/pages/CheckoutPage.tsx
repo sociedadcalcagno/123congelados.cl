@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, CheckCircle, CreditCard, Smartphone, Banknote, Truck } from "lucide-react";
+import { ArrowLeft, CheckCircle, Smartphone, Banknote, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,10 +9,11 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/lib/cart-store";
 import { formatCLP } from "@/lib/data";
+import type { Order } from "@/lib/data";
+import { createOnlineOrder } from "@/lib/supabase-service";
 import { toast } from "sonner";
 
 const PAYMENT_METHODS = [
-  { id: "card", label: "Tarjeta de Crédito/Débito", icon: CreditCard },
   { id: "transfer", label: "Transferencia Bancaria", icon: Banknote },
   { id: "whatsapp", label: "Confirmar por WhatsApp", icon: Smartphone },
 ];
@@ -21,6 +22,8 @@ export function CheckoutPage() {
   const { items, total, clearCart } = useCart();
   const [paymentMethod, setPaymentMethod] = useState("whatsapp");
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [submittedOrder, setSubmittedOrder] = useState<Order | null>(null);
   const cartTotal = total();
 
   const [form, setForm] = useState({
@@ -49,12 +52,13 @@ export function CheckoutPage() {
         <div>
           <h2 className="text-3xl font-extrabold mb-3">¡Pedido Recibido!</h2>
           <p className="text-muted-foreground text-lg max-w-md mx-auto">
-            Hemos recibido tu pedido. Nos contactaremos contigo en breve para confirmar el despacho.
+            Hemos recibido tu pedido online. Nos contactaremos contigo en breve para confirmar pago y despacho.
           </p>
         </div>
         <div className="glass dark:glass-dark rounded-2xl p-6 max-w-sm w-full text-left space-y-2">
+          <p className="text-sm"><span className="font-medium">Pedido:</span> {submittedOrder?.id}</p>
           <p className="text-sm"><span className="font-medium">Nombre:</span> {form.name}</p>
-          <p className="text-sm"><span className="font-medium">Total:</span> {formatCLP(cartTotal)}</p>
+          <p className="text-sm"><span className="font-medium">Total:</span> {formatCLP(submittedOrder?.total ?? 0)}</p>
           <p className="text-sm"><span className="font-medium">Pago:</span> {PAYMENT_METHODS.find(m => m.id === paymentMethod)?.label}</p>
           <p className="text-sm"><span className="font-medium">Dirección:</span> {form.address}</p>
         </div>
@@ -65,7 +69,7 @@ export function CheckoutPage() {
             </Link>
           </Button>
           <a
-            href={`https://wa.me/56995387455?text=Hola! Acabo de hacer un pedido. Nombre: ${form.name}, Total: ${formatCLP(cartTotal)}`}
+            href={`https://wa.me/56995387455?text=${encodeURIComponent(`Hola! Acabo de hacer un pedido online. Pedido: ${submittedOrder?.id}. Nombre: ${form.name}. Total: ${formatCLP(submittedOrder?.total ?? 0)}`)}`}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -81,15 +85,43 @@ export function CheckoutPage() {
     );
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.phone || !form.address) {
       toast.error("Por favor completa los campos requeridos");
       return;
     }
-    clearCart();
-    setSubmitted(true);
-    toast.success("¡Pedido enviado exitosamente!");
+    if (items.length === 0) {
+      toast.error("Tu carrito está vacío");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const order = await createOnlineOrder({
+        customer: form.name,
+        email: form.email || "sin-email@123congelados.cl",
+        phone: form.phone,
+        address: `${form.address}, ${form.city}${form.notes ? ` | Notas: ${form.notes}` : ""}`,
+        total: cartTotal,
+        paymentMethod: PAYMENT_METHODS.find((method) => method.id === paymentMethod)?.label ?? paymentMethod,
+        items: items.map((item) => ({
+          productId: item.product.id,
+          quantity: item.quantity,
+          price: item.product.price,
+          name: item.product.name,
+        })),
+      });
+      setSubmittedOrder(order);
+      clearCart();
+      setSubmitted(true);
+      toast.success("Pedido online enviado al administrador");
+    } catch (error) {
+      console.error("Error creando pedido online", error);
+      toast.error(error instanceof Error ? error.message : "No se pudo enviar el pedido");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -290,9 +322,10 @@ export function CheckoutPage() {
 
                     <Button
                       type="submit"
+                      disabled={saving}
                       className="w-full bg-aqua-gradient text-white font-bold hover:opacity-90 transition-opacity py-6 text-base"
                     >
-                      Confirmar Pedido
+                      {saving ? "Enviando pedido..." : "Confirmar Compra Online"}
                     </Button>
 
                     <Badge className="w-full justify-center py-2 bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800/50">
