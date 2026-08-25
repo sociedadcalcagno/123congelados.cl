@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { ArrowLeft, CheckCircle, Smartphone, Banknote, Truck } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { ArrowLeft, CheckCircle, CreditCard, Smartphone, Banknote, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,12 +14,32 @@ import { createOnlineOrder } from "@/lib/supabase-service";
 import { toast } from "sonner";
 
 const PAYMENT_METHODS = [
+  { id: "mercadopago", label: "Pagar online con Visa/Débito", icon: CreditCard },
   { id: "transfer", label: "Transferencia Bancaria", icon: Banknote },
   { id: "whatsapp", label: "Confirmar por WhatsApp", icon: Smartphone },
 ];
 
+async function createMercadoPagoCheckout(order: Order) {
+  const response = await fetch("/.netlify/functions/mercadopago-checkout", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      orderId: order.id,
+      customer: order.customer,
+      email: order.email,
+      phone: order.phone,
+      items: order.items,
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || JSON.stringify(data));
+  return data.initPoint as string;
+}
+
 export function CheckoutPage() {
   const { items, total, clearCart } = useCart();
+  const [searchParams] = useSearchParams();
   const [paymentMethod, setPaymentMethod] = useState("whatsapp");
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -29,6 +49,34 @@ export function CheckoutPage() {
   const [form, setForm] = useState({
     name: "", email: "", phone: "", address: "", city: "Santiago", notes: "",
   });
+
+  const mpStatus = searchParams.get("mp");
+  const mpOrderId = searchParams.get("order");
+
+  if (mpStatus && mpOrderId) {
+    const statusText = mpStatus === "success"
+      ? "Pago recibido en Mercado Pago"
+      : mpStatus === "pending"
+        ? "Pago pendiente de confirmación"
+        : "Pago no completado";
+
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-6 text-center px-4 py-20">
+        <div className="size-24 rounded-full bg-cyan-100 dark:bg-cyan-950 flex items-center justify-center animate-float">
+          <CheckCircle className="size-12 text-cyan-600" />
+        </div>
+        <div>
+          <h2 className="text-3xl font-extrabold mb-3">{statusText}</h2>
+          <p className="text-muted-foreground text-lg max-w-md mx-auto">
+            Pedido {mpOrderId}. Revisaremos la acreditación en Mercado Pago y coordinaremos el despacho por WhatsApp.
+          </p>
+        </div>
+        <Button asChild className="bg-aqua-gradient text-white gap-2">
+          <Link to="/catalogo">Seguir Comprando</Link>
+        </Button>
+      </div>
+    );
+  }
 
   if (items.length === 0 && !submitted) {
     return (
@@ -52,7 +100,7 @@ export function CheckoutPage() {
         <div>
           <h2 className="text-3xl font-extrabold mb-3">¡Pedido Recibido!</h2>
           <p className="text-muted-foreground text-lg max-w-md mx-auto">
-            Hemos recibido tu pedido online. Nos contactaremos contigo en breve para confirmar pago y despacho.
+            Hemos recibido tu pedido online. Si pagaste por Mercado Pago, revisaremos la acreditación para confirmar el despacho.
           </p>
         </div>
         <div className="glass dark:glass-dark rounded-2xl p-6 max-w-sm w-full text-left space-y-2">
@@ -114,6 +162,14 @@ export function CheckoutPage() {
       });
       setSubmittedOrder(order);
       clearCart();
+
+      if (paymentMethod === "mercadopago") {
+        toast.info("Redirigiendo a Mercado Pago...");
+        const initPoint = await createMercadoPagoCheckout(order);
+        window.location.href = initPoint;
+        return;
+      }
+
       setSubmitted(true);
       toast.success("Pedido online enviado al administrador");
     } catch (error) {
