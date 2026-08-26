@@ -33,7 +33,12 @@ async function createMercadoPagoCheckout(order: Order) {
   });
 
   const data = await response.json();
-  if (!response.ok) throw new Error(data.message || JSON.stringify(data));
+  if (!response.ok) {
+    console.error("Mercado Pago checkout error", data);
+    const policyCode = data.mercadopago?.code ? ` (${data.mercadopago.code})` : "";
+    throw new Error(`${data.message || "Mercado Pago rechazó el pago"}${policyCode}`);
+  }
+  if (!data.initPoint) throw new Error("Mercado Pago no devolvió link de pago");
   return data.initPoint as string;
 }
 
