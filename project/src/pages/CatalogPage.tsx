@@ -12,6 +12,7 @@ import type { Category, Product } from "@/lib/data";
 import { getProducts } from "@/lib/supabase-service";
 import type { ProductWithVariants, ProductVariant } from "@/lib/supabase-service";
 import { useCart } from "@/lib/cart-store";
+import { formatPricePerKg } from "@/lib/price-utils";
 import { toast } from "sonner";
 
 const ALL_CATEGORIES: { id: Category | "all"; label: string; emoji: string }[] = [
@@ -234,6 +235,7 @@ export function CatalogPage() {
               const stock = selectedVariant?.stock ?? product.stock;
               const unit = selectedVariant?.unit ?? product.unit;
               const weight = selectedVariant?.weight ?? product.weight;
+              const pricePerKg = formatPricePerKg(price, weight);
 
               return (
               <Card
@@ -302,7 +304,7 @@ export function CatalogPage() {
                       >
                         {activeVariants.map((variant) => (
                           <option key={variant.id} value={variant.id}>
-                            {variant.name} - {formatCLP(variant.price)}
+                            {variant.name} - {formatCLP(variant.price)}{formatPricePerKg(variant.price, variant.weight) ? ` · ${formatPricePerKg(variant.price, variant.weight)}` : ""}
                           </option>
                         ))}
                       </select>
@@ -322,8 +324,11 @@ export function CatalogPage() {
                         )}
                       </div>
                       <span className="text-xs text-muted-foreground">
-                        por {unit} · {weight}
+                        precio final / {unit} · {weight}
                       </span>
+                      {pricePerKg && (
+                        <p className="text-xs font-medium text-cyan-700 dark:text-cyan-300">Equivale a {pricePerKg}</p>
+                      )}
                     </div>
                     <Button
                       size="sm"

@@ -11,6 +11,7 @@ import { getCategoryLabel, formatCLP } from "@/lib/data";
 import type { Category } from "@/lib/data";
 import { getProducts } from "@/lib/supabase-service";
 import type { ProductWithVariants } from "@/lib/supabase-service";
+import { formatPricePerKg } from "@/lib/price-utils";
 import { toast } from "sonner";
 
 const CATEGORIES: Category[] = ["salmon", "camarones", "mariscos", "reineta", "congelados"];
@@ -26,6 +27,7 @@ type CatalogRow = {
   weight: string;
   badge?: string;
   image: string;
+  pricePerKg: string | null;
 };
 
 const loadCanvasImage = (src: string) => new Promise<HTMLImageElement | null>((resolve) => {
@@ -132,6 +134,7 @@ export function AdminPriceList() {
             weight: variant.weight,
             badge: product.badge,
             image: product.image,
+            pricePerKg: formatPricePerKg(variant.price, variant.weight),
           };
         }
 
@@ -145,6 +148,7 @@ export function AdminPriceList() {
           weight: product.weight,
           badge: product.badge,
           image: product.image,
+          pricePerKg: formatPricePerKg(product.price, product.weight),
         };
       })
       .filter((row) => includeOutOfStock || row.stock > 0)
@@ -170,7 +174,7 @@ export function AdminPriceList() {
       if (categoryRows.length === 0) continue;
       lines.push(`*${getCategoryLabel(category)}*`);
       categoryRows.forEach((row) => {
-        lines.push(`- ${row.product} ${row.detail}: ${formatCLP(row.price)} / ${row.unit}`);
+        lines.push(`- ${row.product} ${row.detail}: ${formatCLP(row.price)} final${row.pricePerKg ? ` (${row.pricePerKg})` : ""}`);
       });
       lines.push("");
     }
@@ -306,11 +310,16 @@ export function AdminPriceList() {
           ctx.fillText(row.detail, x + 20, cardY + 250);
           ctx.font = "16px Arial";
           ctx.fillText(`${row.weight} · Stock ${row.stock}`, x + 20, cardY + 278);
+          if (row.pricePerKg) {
+            ctx.fillStyle = "#0e7490";
+            ctx.font = "700 16px Arial";
+            ctx.fillText(`Equivale a ${row.pricePerKg}`, x + 20, cardY + 298);
+          }
 
           ctx.strokeStyle = "#e2e8f0";
           ctx.beginPath();
-          ctx.moveTo(x + 20, cardY + 302);
-          ctx.lineTo(x + cardWidth - 20, cardY + 302);
+          ctx.moveTo(x + 20, cardY + 312);
+          ctx.lineTo(x + cardWidth - 20, cardY + 312);
           ctx.stroke();
 
           ctx.fillStyle = "#0e7490";
@@ -534,13 +543,16 @@ export function AdminPriceList() {
                           <div>
                             <p data-export-color="muted" className="text-xs font-semibold text-slate-500">{row.detail}</p>
                             <p data-export-color="muted" className="text-xs text-slate-400">{row.weight} · Stock {row.stock}</p>
+                            {row.pricePerKg && (
+                              <p data-export-color="cyan" className="text-xs font-semibold text-cyan-700">Equivale a {row.pricePerKg}</p>
+                            )}
                           </div>
                           {row.badge && <Badge data-export-bg="badge" className="bg-cyan-100 text-cyan-800 hover:bg-cyan-100">{row.badge}</Badge>}
                         </div>
                         <div className="mt-3 flex items-end justify-between gap-2 border-t border-slate-100 pt-3">
                           <div>
                             <p data-export-color="cyan" className="text-2xl font-black text-cyan-700">{formatCLP(row.price)}</p>
-                            <p data-export-color="muted" className="text-xs text-slate-500">/{row.unit}</p>
+                            <p data-export-color="muted" className="text-xs text-slate-500">precio final / {row.unit}</p>
                           </div>
                           <span data-export-bg="dark" className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white">Pedir</span>
                         </div>

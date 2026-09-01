@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useCart } from "@/lib/cart-store";
 import { formatCLP } from "@/lib/data";
+import { formatPricePerKg } from "@/lib/price-utils";
 
 export function CartDrawer() {
   const { items, isOpen, setCartOpen, removeItem, updateQuantity, total, itemCount } = useCart();
@@ -66,6 +67,11 @@ export function CartDrawer() {
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {item.product.weight}
                       </p>
+                      {formatPricePerKg(item.product.price, item.product.weight) && (
+                        <p className="text-xs font-medium text-cyan-700 dark:text-cyan-300 mt-0.5">
+                          Equivale a {formatPricePerKg(item.product.price, item.product.weight)}
+                        </p>
+                      )}
                       <div className="flex items-center justify-between mt-2">
                         <div className="flex items-center gap-1">
                           <Button

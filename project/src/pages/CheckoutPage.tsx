@@ -11,6 +11,7 @@ import { useCart } from "@/lib/cart-store";
 import { formatCLP } from "@/lib/data";
 import type { Order } from "@/lib/data";
 import { createOnlineOrder } from "@/lib/supabase-service";
+import { formatPricePerKg } from "@/lib/price-utils";
 import { toast } from "sonner";
 
 const PAYMENT_METHODS = [
@@ -354,6 +355,11 @@ export function CheckoutPage() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium line-clamp-1">{item.product.name}</p>
                           <p className="text-xs text-muted-foreground">x{item.quantity} {item.product.unit}</p>
+                          {formatPricePerKg(item.product.price, item.product.weight) && (
+                            <p className="text-xs font-medium text-cyan-700 dark:text-cyan-300">
+                              {formatPricePerKg(item.product.price, item.product.weight)}
+                            </p>
+                          )}
                         </div>
                         <span className="text-sm font-semibold flex-shrink-0">
                           {formatCLP(item.product.price * item.quantity)}
