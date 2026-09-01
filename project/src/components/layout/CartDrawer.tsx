@@ -68,8 +68,8 @@ export function CartDrawer() {
                         {item.product.weight}
                       </p>
                       {formatPricePerKg(item.product.price, item.product.weight) && (
-                        <p className="text-xs font-medium text-cyan-700 dark:text-cyan-300 mt-0.5">
-                          Equivale a {formatPricePerKg(item.product.price, item.product.weight)}
+                        <p className="text-xs font-bold text-primary mt-0.5">
+                          {formatPricePerKg(item.product.price, item.product.weight)}
                         </p>
                       )}
                       <div className="flex items-center justify-between mt-2">
@@ -96,7 +96,7 @@ export function CartDrawer() {
                           </Button>
                         </div>
                         <span className="font-semibold text-sm text-primary">
-                          {formatCLP(item.product.price * item.quantity)}
+                          Total {formatCLP(item.product.price * item.quantity)}
                         </span>
                       </div>
                     </div>

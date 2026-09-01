@@ -106,9 +106,12 @@ function ProductCard({ product }: { product: ProductWithVariants }) {
 
         <div className="flex items-end justify-between mt-3 gap-2">
           <div>
+            {pricePerKg && (
+              <p className="text-lg font-extrabold text-primary">{pricePerKg}</p>
+            )}
             <div className="flex items-center gap-2">
-              <span className="text-lg font-bold text-primary">
-                {formatCLP(price)}
+              <span className={pricePerKg ? "text-xs font-semibold text-muted-foreground" : "text-lg font-bold text-primary"}>
+                Total {formatCLP(price)}
               </span>
               {product.originalPrice && (
                 <span className="text-xs text-muted-foreground line-through">
@@ -116,10 +119,7 @@ function ProductCard({ product }: { product: ProductWithVariants }) {
                 </span>
               )}
             </div>
-            <span className="text-xs text-muted-foreground">precio final / {unit}</span>
-            {pricePerKg && (
-              <p className="text-xs font-medium text-cyan-700 dark:text-cyan-300">Equivale a {pricePerKg}</p>
-            )}
+            <span className="text-xs text-muted-foreground">{weight} · precio final / {unit}</span>
           </div>
           <Button
             size="sm"

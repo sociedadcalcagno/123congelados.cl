@@ -313,9 +313,12 @@ export function CatalogPage() {
 
                   <div className="flex items-end justify-between gap-3">
                     <div>
+                      {pricePerKg && (
+                        <p className="text-xl font-extrabold text-primary">{pricePerKg}</p>
+                      )}
                       <div className="flex items-baseline gap-1.5">
-                        <span className="text-xl font-extrabold text-primary">
-                          {formatCLP(price)}
+                        <span className={pricePerKg ? "text-xs font-semibold text-muted-foreground" : "text-xl font-extrabold text-primary"}>
+                          Total {formatCLP(price)}
                         </span>
                         {product.originalPrice && (
                           <span className="text-xs text-muted-foreground line-through">
@@ -326,9 +329,6 @@ export function CatalogPage() {
                       <span className="text-xs text-muted-foreground">
                         precio final / {unit} · {weight}
                       </span>
-                      {pricePerKg && (
-                        <p className="text-xs font-medium text-cyan-700 dark:text-cyan-300">Equivale a {pricePerKg}</p>
-                      )}
                     </div>
                     <Button
                       size="sm"

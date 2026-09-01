@@ -310,12 +310,6 @@ export function AdminPriceList() {
           ctx.fillText(row.detail, x + 20, cardY + 250);
           ctx.font = "16px Arial";
           ctx.fillText(`${row.weight} · Stock ${row.stock}`, x + 20, cardY + 278);
-          if (row.pricePerKg) {
-            ctx.fillStyle = "#0e7490";
-            ctx.font = "700 16px Arial";
-            ctx.fillText(`Equivale a ${row.pricePerKg}`, x + 20, cardY + 298);
-          }
-
           ctx.strokeStyle = "#e2e8f0";
           ctx.beginPath();
           ctx.moveTo(x + 20, cardY + 312);
@@ -323,11 +317,11 @@ export function AdminPriceList() {
           ctx.stroke();
 
           ctx.fillStyle = "#0e7490";
-          ctx.font = "900 34px Arial";
-          ctx.fillText(formatCLP(row.price), x + 20, cardY + 348);
+          ctx.font = "900 32px Arial";
+          ctx.fillText(row.pricePerKg ?? formatCLP(row.price), x + 20, cardY + 346);
           ctx.fillStyle = "#64748b";
-          ctx.font = "16px Arial";
-          ctx.fillText(`/${row.unit}`, x + 20, cardY + 372);
+          ctx.font = "700 16px Arial";
+          ctx.fillText(`Total ${formatCLP(row.price)} · ${row.unit}`, x + 20, cardY + 372);
 
           fillRoundedRect(ctx, x + cardWidth - 102, cardY + 334, 78, 34, 17, "#020617");
           ctx.fillStyle = "#ffffff";
@@ -543,16 +537,13 @@ export function AdminPriceList() {
                           <div>
                             <p data-export-color="muted" className="text-xs font-semibold text-slate-500">{row.detail}</p>
                             <p data-export-color="muted" className="text-xs text-slate-400">{row.weight} · Stock {row.stock}</p>
-                            {row.pricePerKg && (
-                              <p data-export-color="cyan" className="text-xs font-semibold text-cyan-700">Equivale a {row.pricePerKg}</p>
-                            )}
                           </div>
                           {row.badge && <Badge data-export-bg="badge" className="bg-cyan-100 text-cyan-800 hover:bg-cyan-100">{row.badge}</Badge>}
                         </div>
                         <div className="mt-3 flex items-end justify-between gap-2 border-t border-slate-100 pt-3">
                           <div>
-                            <p data-export-color="cyan" className="text-2xl font-black text-cyan-700">{formatCLP(row.price)}</p>
-                            <p data-export-color="muted" className="text-xs text-slate-500">precio final / {row.unit}</p>
+                            <p data-export-color="cyan" className="text-2xl font-black text-cyan-700">{row.pricePerKg ?? formatCLP(row.price)}</p>
+                            <p data-export-color="muted" className="text-xs text-slate-500">Total {formatCLP(row.price)} · {row.unit}</p>
                           </div>
                           <span data-export-bg="dark" className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white">Pedir</span>
                         </div>
